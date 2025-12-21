@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "996092510410",
+    "project_id": "unisync-dev-5d925",
+    "storage_bucket": "unisync-dev-5d925.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:996092510410:android:7b1b98e2a62fbd6abbb433",
+        "android_client_info": {
+          "package_name": "com.unisync.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAT-aC2102724cKmoT-2r0AKFeIGpf7FKQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

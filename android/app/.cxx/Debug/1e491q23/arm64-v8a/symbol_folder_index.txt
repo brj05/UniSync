@@ -1,0 +1,1 @@
+C:\Users\bhoom\AndroidStudioProjects\UniSync\build\app\intermediates\cxx\Debug\1e491q23\obj\arm64-v8a

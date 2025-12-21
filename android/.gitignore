@@ -1,13 +1,60 @@
-gradle-wrapper.jar
-/.gradle
-/captures/
-/gradlew
-/gradlew.bat
-/local.properties
-GeneratedPluginRegistrant.java
+# ======================
+# Flutter / Dart
+# ======================
+.dart_tool/
+.packages
+.build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
 
-# Remember to never publicly share your keystore.
-# See https://flutter.dev/to/reference-keystore
+# ======================
+# IDE
+# ======================
+.idea/
+.vscode/
+*.iml
+
+# ======================
+# Android
+# ======================
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/gradlew
+android/gradlew.bat
+android/gradle-wrapper.jar
+
+# ======================
+# Firebase (IMPORTANT)
+# ======================
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# ======================
+# iOS
+# ======================
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/Flutter.framework
+ios/Flutter/App.framework
+
+# ======================
+# Build outputs
+# ======================
+build/
+captures/
+
+# ======================
+# Keystore / Secrets
+# ======================
 key.properties
 **/*.keystore
 **/*.jks
+
+# ======================
+# Generated
+# ======================
+GeneratedPluginRegistrant.java
