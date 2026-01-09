@@ -10,11 +10,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  image_picker: ^1.0.7
   firebase_core: ^2.32.0
   firebase_auth: ^4.17.0
   cloud_firestore: ^4.15.8
   cupertino_icons: ^1.0.8
+  shared_preferences: ^2.2.2
   csv: ^6.0.0
 
 dev_dependencies:
