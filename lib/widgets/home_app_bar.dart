@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/club_hub.dart';
 AppBar buildHomeAppBar(BuildContext context) {
   return AppBar(
     backgroundColor: const Color(0xFFFFF6EC), // same as app bg
@@ -37,12 +38,13 @@ AppBar buildHomeAppBar(BuildContext context) {
       ),
 
       IconButton(
-        icon: const Icon(Icons.groups_outlined),
-        color: Colors.black87,
-        iconSize: 26,
-        onPressed: () {
-          // TODO: Navigate to Clubs Screen
-        },
+              icon: const Icon(Icons.groups_outlined, color: Colors.black),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ClubHubScreen()),
+                );
+              },
       ),
 
       const SizedBox(width: 8),
