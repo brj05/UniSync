@@ -3,7 +3,7 @@ import 'home_feed.dart';
 import 'create_post.dart';
 import 'talk_zone.dart';
 import 'profile.dart';
-
+import '../widgets/home_bottom_nav.dart';
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -50,38 +50,9 @@ class _HomeShellState extends State<HomeShell> {
         children: _screens,
       ),
 
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: HomeBottomNav(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF8B5CF6),
-        unselectedItemColor: Colors.grey,
-
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle, size: 34),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: '',
-          ),
-        ],
       ),
     );
   }

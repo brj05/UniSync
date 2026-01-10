@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/club_hub.dart';
+import '../screens/notification_screen.dart';
 AppBar buildHomeAppBar(BuildContext context) {
   return AppBar(
     backgroundColor: const Color(0xFFFFF6EC), // same as app bg
@@ -30,10 +31,13 @@ AppBar buildHomeAppBar(BuildContext context) {
     actions: [
       IconButton(
         icon: const Icon(Icons.notifications_none),
-        color: Colors.black87,
-        iconSize: 26,
         onPressed: () {
-          // TODO: Navigate to Notifications Screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const NotificationScreen(),
+            ),
+          );
         },
       ),
 
