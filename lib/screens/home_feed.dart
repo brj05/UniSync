@@ -1,47 +1,50 @@
 import 'package:flutter/material.dart';
+import '../services/post_service.dart';
 import '../widgets/post_card.dart';
 import '../widgets/home_app_bar.dart';
+import '../models/post_model.dart';
+
 class HomeFeedScreen extends StatelessWidget {
   const HomeFeedScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final postService = PostService();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: buildHomeAppBar(context),
-      body: ListView(
-        children: const [
-          PostCard(
-            username: 'Aarav Sharma',
-            caption:
-                'Just performed at the open mic 🎤🔥 What an amazing crowd!',
-            imageUrl:
-                'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4',
-            likes: 120,
-            comments: 18,
-            views: 890,
-          ),
+      body: StreamBuilder<List<PostModel>>(
+        stream: postService.streamPosts(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          PostCard(
-            username: 'Priya Verma',
-            caption:
-                'Trying food photography 📸 Let me know how it looks!',
-            imageUrl:
-                'https://images.unsplash.com/photo-1504674900247-0877df9cc836',
-            likes: 98,
-            comments: 12,
-            views: 640,
-          ),
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No posts yet'));
+          }
 
-          PostCard(
-            username: 'Rohit Mehta',
-            caption:
-                'Learning Flutter 🚀 Slowly falling in love with app dev.',
-            likes: 76,
-            comments: 9,
-            views: 430,
-          ),
-        ],
+          final posts = snapshot.data!;
+
+          return ListView.builder(
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              final post = posts[index];
+
+              return PostCard(
+                authorName: post.authorName,
+                authorAvatar: post.authorAvatar,
+                caption: post.caption,
+                imageUrl: post.imageUrl.isEmpty ? null : post.imageUrl,
+                likes: post.likesCount,
+                comments: post.commentsCount,
+                views: post.viewCount,
+                clubName: post.isClubPost ? post.clubName : null,
+              );
+            },
+          );
+        },
       ),
     );
   }

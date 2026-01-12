@@ -5,54 +5,46 @@ class PostModel {
   final String authorId;
   final String authorName;
   final String authorAvatar;
-  final String text;
-  final String? mediaUrl;
-  final String? mediaType;
-  final String? clubId;
-  final String? clubName;
-  final bool isClubPost;
-  final bool aiApproved;
+  final String caption;
+  final String imageUrl;
   final int likesCount;
   final int commentsCount;
-  final int viewsCount;
-  final Timestamp createdAt;
+  final int viewCount;
+  final bool isClubPost;
+  final String clubName;
 
   PostModel({
     required this.id,
     required this.authorId,
     required this.authorName,
     required this.authorAvatar,
-    required this.text,
-    this.mediaUrl,
-    this.mediaType,
-    this.clubId,
-    this.clubName,
-    required this.isClubPost,
-    required this.aiApproved,
+    required this.caption,
+    required this.imageUrl,
     required this.likesCount,
     required this.commentsCount,
-    required this.viewsCount,
-    required this.createdAt,
+    required this.viewCount,
+    required this.isClubPost,
+    required this.clubName,
   });
 
-  factory PostModel.fromDoc(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory PostModel.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data();
+
     return PostModel(
       id: doc.id,
-      authorId: data['authorId'],
-      authorName: data['authorName'],
-      authorAvatar: data['authorAvatar'],
-      text: data['text'],
-      mediaUrl: data['mediaUrl'],
-      mediaType: data['mediaType'],
-      clubId: data['clubId'],
-      clubName: data['clubName'],
-      isClubPost: data['isClubPost'],
-      aiApproved: data['aiApproved'],
-      likesCount: data['likesCount'],
-      commentsCount: data['commentsCount'],
-      viewsCount: data['viewsCount'],
-      createdAt: data['createdAt'],
+      authorId: data['authorId'] ?? '',
+      authorName: data['authorName'] ?? 'Unknown',
+      authorAvatar: data['authorAvatar'] ??
+          'https://i.pravatar.cc/150?img=3', // ✅ fallback
+      caption: data['caption'] ?? '',
+      imageUrl: data['imageUrl'] ?? '',
+      likesCount: data['likesCount'] ?? 0,
+      commentsCount: data['commentsCount'] ?? 0,
+      viewCount: data['viewCount'] ?? 0,
+      isClubPost: data['isClubPost'] ?? false,
+      clubName: data['clubName'] ?? '',
     );
   }
 }
