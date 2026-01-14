@@ -12,6 +12,7 @@ class PostModel {
   final int viewCount;
   final bool isClubPost;
   final String clubName;
+  final List<String> likedBy;
 
   PostModel({
     required this.id,
@@ -25,19 +26,20 @@ class PostModel {
     required this.viewCount,
     required this.isClubPost,
     required this.clubName,
+    required this.likedBy,
   });
 
-  factory PostModel.fromFirestore(
-     QueryDocumentSnapshot doc,
-   ) {
-     final data = doc.data() as Map<String, dynamic>;
+  bool isLikedBy(String userId) => likedBy.contains(userId);
+
+  factory PostModel.fromFirestore(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
 
     return PostModel(
       id: doc.id,
       authorId: data['authorId'] ?? '',
       authorName: data['authorName'] ?? 'Unknown',
       authorAvatar: data['authorAvatar'] ??
-          'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff', // ✅ fallback
+          'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff',
       caption: data['caption'] ?? '',
       imageUrl: data['imageUrl'] ?? '',
       likesCount: data['likesCount'] ?? 0,
@@ -45,6 +47,7 @@ class PostModel {
       viewCount: data['viewCount'] ?? 0,
       isClubPost: data['isClubPost'] ?? false,
       clubName: data['clubName'] ?? '',
+      likedBy: List<String>.from(data['likedBy'] ?? []),
     );
   }
 }

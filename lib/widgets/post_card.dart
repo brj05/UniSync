@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../services/post_service.dart';
 
 class PostCard extends StatelessWidget {
+  final String postId;
+  final String currentUserId;
   final String authorName;
   final String authorAvatar;
   final String caption;
@@ -9,9 +12,12 @@ class PostCard extends StatelessWidget {
   final int comments;
   final int views;
   final String? clubName;
+  final bool isLiked;
 
   const PostCard({
     super.key,
+    required this.postId,
+    required this.currentUserId,
     required this.authorName,
     required this.authorAvatar,
     required this.caption,
@@ -20,10 +26,13 @@ class PostCard extends StatelessWidget {
     required this.comments,
     required this.views,
     this.clubName,
+    required this.isLiked,
   });
 
   @override
   Widget build(BuildContext context) {
+    final postService = PostService();
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       padding: const EdgeInsets.all(12),
@@ -34,88 +43,50 @@ class PostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          /// 🔹 HEADER ROW
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CircleAvatar(
                 radius: 20,
                 backgroundImage: NetworkImage(authorAvatar),
-                backgroundColor: Colors.grey.shade300,
               ),
               const SizedBox(width: 10),
-
-              /// NAME + CLUB
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      authorName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    if (clubName != null)
-                      Text(
-                        'in collaboration with $clubName',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  authorName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-              ),
-
-              /// 3 DOT MENU
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: () {
-                  // TODO: Post options (delete/report/etc)
-                },
               ),
             ],
           ),
 
           const SizedBox(height: 10),
 
-          /// 🔹 CAPTION
-          if (caption.isNotEmpty)
-            Text(
-              caption,
-              style: const TextStyle(fontSize: 14),
-            ),
+          if (caption.isNotEmpty) Text(caption),
 
-          /// 🔹 IMAGE
           if (imageUrl != null) ...[
             const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl!,
-                width: double.infinity,
-                height: 220,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 220,
-                  color: Colors.grey.shade200,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.broken_image),
-                ),
-              ),
-            ),
+            Image.network(imageUrl!, height: 220, fit: BoxFit.cover),
           ],
 
           const SizedBox(height: 12),
 
-          /// 🔹 ACTION ROW
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _action(Icons.favorite_border, likes),
+              GestureDetector(
+                onTap: () {
+                  postService.toggleLike(
+                    postId: postId,
+                    userId: currentUserId,
+                    isLiked: isLiked,
+                  );
+                },
+                child: _action(
+                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  likes,
+                  color: isLiked ? Colors.red : Colors.grey.shade700,
+                ),
+              ),
               _action(Icons.chat_bubble_outline, comments),
               _action(Icons.remove_red_eye_outlined, views),
             ],
@@ -125,15 +96,12 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  Widget _action(IconData icon, int count) {
+  Widget _action(IconData icon, int count, {Color? color}) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey.shade700),
+        Icon(icon, size: 20, color: color ?? Colors.grey.shade700),
         const SizedBox(width: 4),
-        Text(
-          count.toString(),
-          style: const TextStyle(fontSize: 13),
-        ),
+        Text(count.toString()),
       ],
     );
   }
