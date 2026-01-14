@@ -28,16 +28,16 @@ class PostModel {
   });
 
   factory PostModel.fromFirestore(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data();
+     QueryDocumentSnapshot doc,
+   ) {
+     final data = doc.data() as Map<String, dynamic>;
 
     return PostModel(
       id: doc.id,
       authorId: data['authorId'] ?? '',
       authorName: data['authorName'] ?? 'Unknown',
       authorAvatar: data['authorAvatar'] ??
-          'https://i.pravatar.cc/150?img=3', // ✅ fallback
+          'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff', // ✅ fallback
       caption: data['caption'] ?? '',
       imageUrl: data['imageUrl'] ?? '',
       likesCount: data['likesCount'] ?? 0,

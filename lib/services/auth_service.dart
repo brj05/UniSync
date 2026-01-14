@@ -54,5 +54,35 @@ class AuthService {
       final doc = await _db.collection('students').doc(phone).get();
       return doc.exists && (doc.data()?['interestsSelected'] == true);
     }
+    Future<void> syncUserFromSource({
+      required String phone,
+      required String role, // 'student' or 'admin'
+    }) async {
+      final usersRef = _db.collection('users');
+      final userDoc = usersRef.doc(phone);
+
+      // If already exists → do nothing
+      final userSnap = await userDoc.get();
+      if (userSnap.exists) return;
+
+      // Decide source collection
+      final sourceCollection = role == 'student' ? 'students' : 'admins';
+
+      final sourceDoc =
+          await _db.collection(sourceCollection).doc(phone).get();
+
+      if (!sourceDoc.exists) return;
+
+      final sourceData = sourceDoc.data()!;
+
+      // Copy everything + add role
+      await userDoc.set({
+        ...sourceData,            // copy student/admin fields
+        'phone': phone,           // common id
+        'role': role,             // 🔥 important
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
 }
 

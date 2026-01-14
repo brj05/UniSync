@@ -4,6 +4,7 @@ import 'create_post.dart';
 import 'talk_zone.dart';
 import 'profile.dart';
 import '../widgets/home_bottom_nav.dart';
+
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -28,12 +29,7 @@ class _HomeShellState extends State<HomeShell> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const CreatePostScreen(
-            authorId: 'demo_user',
-            authorName: 'Demo User',
-            authorAvatar:
-                'https://i.pravatar.cc/150?img=3', // temp avatar
-          ),
+          builder: (_) => const CreatePostScreen(),
         ),
       );
       return;
@@ -49,7 +45,6 @@ class _HomeShellState extends State<HomeShell> {
         index: _currentIndex,
         children: _screens,
       ),
-
       bottomNavigationBar: HomeBottomNav(
         currentIndex: _currentIndex,
         onTap: _onNavTap,

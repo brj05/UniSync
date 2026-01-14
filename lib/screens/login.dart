@@ -42,7 +42,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _stopWithError();
         return;
       }
-
+      // 🔥 ADD THIS
+      await authService.syncUserFromSource(
+        phone: phone,
+        role: 'student',
+      );
       /// SAVE SESSION
       await SessionService.saveSession(
         role: 'student',
@@ -76,7 +80,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _stopWithError();
         return;
       }
-
+      // 🔥 ADD THIS
+      await authService.syncUserFromSource(
+        phone: phone,
+        role: 'admin',
+      );
       /// SAVE SESSION
       await SessionService.saveSession(
         role: 'admin',
