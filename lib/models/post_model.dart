@@ -29,7 +29,11 @@ class PostModel {
     required this.likedBy,
   });
 
-  bool isLikedBy(String userId) => likedBy.contains(userId);
+  bool isLikedBy(String userId) {
+    final List likedBy =
+        (this as dynamic).likedBy ?? [];
+    return likedBy.contains(userId);
+  }
 
   factory PostModel.fromFirestore(QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
