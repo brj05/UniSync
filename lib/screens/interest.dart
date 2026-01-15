@@ -126,13 +126,22 @@ class _InterestSelectionScreenState extends State<InterestSelectionScreen> {
 
     setState(() => submitting = true);
 
+    final interestsList = selectedInterests.toList();
+
+    /// 🔹 UPDATE STUDENTS COLLECTION (existing logic)
     await _db.collection('students').doc(widget.phone).update({
-      'interests': selectedInterests.toList(),
+      'interests': interestsList,
+      'interestsSelected': true,
+    });
+
+    /// 🔹 ALSO UPDATE USERS COLLECTION (NEW – REQUIRED)
+    await _db.collection('users').doc(widget.phone).update({
+      'interests': interestsList,
       'interestsSelected': true,
     });
 
     if (!mounted) return;
-// TODO: Navigate to Home
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeShell()),
