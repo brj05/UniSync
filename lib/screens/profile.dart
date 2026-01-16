@@ -16,20 +16,22 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
   String? currentUserId;
   Map<String, dynamic>? currentUserData;
 
-  bool gridView = true;
-
-  Stream<QuerySnapshot>? _userPostsStream;
+  late TabController _tabController; // ✅ REQUIRED
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this); // ✅ REQUIRED
     _loadSession();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose(); // ✅ REQUIRED
+    super.dispose();
   }
 
   Future<void> _loadSession() async {
@@ -43,15 +45,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         .doc(currentUserId)
         .get();
 
+    if (!userDoc.exists) return;
+
     currentUserData = userDoc.data();
-
-    final profileUserId = widget.userId ?? currentUserId;
-
-    _userPostsStream = FirebaseFirestore.instance
-        .collection('posts')
-        .where('authorId', isEqualTo: profileUserId)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
 
     if (mounted) setState(() {});
   }
@@ -75,17 +71,22 @@ class _ProfileScreenState extends State<ProfileScreen>
             .doc(profileUserId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text('User not found'));
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
           final isOwnProfile = profileUserId == currentUserId;
 
           final avatar = data['avatar'] ?? '';
-          final name = (data['profileName']?.toString().isNotEmpty ?? false)
-              ? data['profileName']
-              : data['name'];
+          final name =
+              (data['profileName']?.toString().isNotEmpty ?? false)
+                  ? data['profileName']
+                  : data['name'];
           final bio = data['bio'] ?? '';
 
           return Column(
@@ -99,7 +100,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       radius: 40,
                       backgroundColor: Colors.grey.shade300,
                       backgroundImage:
-                          avatar.isNotEmpty ? NetworkImage(avatar) : null,
+                          avatar.toString().isNotEmpty
+                              ? NetworkImage(avatar)
+                              : null,
                     ),
                     const SizedBox(width: 24),
                     Expanded(
@@ -116,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
 
-              /// NAME + BIO (LEFT ALIGNED)
+              /// NAME + BIO
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
@@ -126,12 +129,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       name ?? '',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 15,
+                        fontSize: 14,
                       ),
                     ),
                     if (bio.toString().isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Text(bio, style: const TextStyle(fontSize: 13)),
+                      Text(bio, style: const TextStyle(fontSize: 12)),
                     ],
                   ],
                 ),
@@ -139,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               const SizedBox(height: 14),
 
-              /// ACTION BUTTONS
+              /// ACTION BUTTON
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: isOwnProfile
@@ -180,24 +183,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              /// TAB BAR (DOUBLE TAP GRID)
+              /// TAB BAR (RESTORED)
               TabBar(
                 controller: _tabController,
-                tabs: [
-                  GestureDetector(
-                    onDoubleTap: () {
-                      setState(() {
-                        gridView = !gridView;
-                      });
-                    },
-                    child: const Tab(icon: Icon(Icons.grid_on)),
-                  ),
-                  const Tab(icon: Icon(Icons.person_pin_outlined)),
+                indicatorColor: Colors.black,
+                tabs: const [
+                  Tab(icon: Icon(Icons.grid_on)),
+                  Tab(icon: Icon(Icons.person_pin_outlined)),
                 ],
               ),
 
+              /// TAB CONTENT
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
@@ -214,7 +212,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// STATS
   Widget _stat(String label, int value) {
     return Column(
       children: [
@@ -228,68 +225,55 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// USER POSTS (NO RELOAD, SINGLE STREAM)
+  /// USER POSTS (LIST ONLY)
   Widget _userPosts(String userId) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _userPostsStream,
+      stream: FirebaseFirestore.instance
+          .collection('posts')
+          .where('authorId', isEqualTo: userId)
+          .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final posts = snapshot.data!.docs;
-
-        if (posts.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(child: Text('No posts yet'));
         }
 
-        /// LIST VIEW
-        if (!gridView) {
-          return ListView.builder(
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
-              final data = post.data() as Map<String, dynamic>;
+        final posts = snapshot.data!.docs.toList();
 
-              return PostCard(
-                postId: post.id,
-                authorId: data['authorId'],
-                currentUserId: currentUserId!,
-                currentUserName: currentUserData!['name'],
-                currentUserAvatar: currentUserData!['avatar'],
-                authorName: data['authorName'],
-                authorAvatar: data['authorAvatar'],
-                caption: data['caption'],
-                imageUrl: data['imageUrl'],
-                likes: data['likesCount'],
-                comments: data['commentsCount'],
-                views: data['viewCount'],
-                clubName: data['clubName'],
-                isLiked:
-                    (data['likedBy'] ?? []).contains(currentUserId),
-              );
-            },
-          );
-        }
+        posts.sort((a, b) {
+          final aTime = a['createdAt'] as Timestamp?;
+          final bTime = b['createdAt'] as Timestamp?;
+          return (bTime?.millisecondsSinceEpoch ?? 0)
+              .compareTo(aTime?.millisecondsSinceEpoch ?? 0);
+        });
 
-        /// GRID VIEW
-        return GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 1,
-            mainAxisSpacing: 1,
-          ),
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8),
           itemCount: posts.length,
           itemBuilder: (context, index) {
-            final data = posts[index].data() as Map<String, dynamic>;
+            final post = posts[index];
+            final data = post.data() as Map<String, dynamic>;
 
-            return data['imageUrl'] != null &&
-                    data['imageUrl'].toString().isNotEmpty
-                ? Image.network(
-                    data['imageUrl'],
-                    fit: BoxFit.cover,
-                  )
-                : Container(color: Colors.grey.shade300);
+            return PostCard(
+              postId: post.id,
+              authorId: data['authorId'],
+              currentUserId: currentUserId!,
+              currentUserName: currentUserData!['name'],
+              currentUserAvatar: currentUserData!['avatar'],
+              authorName: data['authorName'],
+              authorAvatar: data['authorAvatar'],
+              caption: data['caption'],
+              imageUrl: data['imageUrl'],
+              likes: data['likesCount'] ?? 0,
+              comments: data['commentsCount'] ?? 0,
+              views: data['viewCount'] ?? 0,
+              clubName: data['clubName'],
+              isLiked:
+                  (data['likedBy'] ?? []).contains(currentUserId),
+            );
           },
         );
       },

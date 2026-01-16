@@ -153,14 +153,19 @@ class PostCard extends StatelessWidget {
             Text(caption),
           ],
 
-          if (imageUrl != null) ...[
+          if (imageUrl != null && imageUrl!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(imageUrl!),
+              child: Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const SizedBox(); // silently ignore broken images
+                },
+              ),
             ),
           ],
-
           const SizedBox(height: 10),
 
           /// ACTION ROW

@@ -6,38 +6,36 @@ class PostService {
   final CollectionReference _postsRef =
       FirebaseFirestore.instance.collection('posts');
 
-  /// CREATE POST + INCREMENT USER NoOfPosts
   Future<void> createPost({
-    required String authorId,
-    required String authorName,
-    required String authorAvatar,
-    required String caption,
-    required String imageUrl,
-  }) async {
-    final userRef = _db.collection('users').doc(authorId);
-
-    await _db.runTransaction((transaction) async {
+      required String authorId,
+      required String authorName,
+      required String authorAvatar,
+      required String caption,
+      required String imageUrl,
+    }) async {
       final postRef = _postsRef.doc();
+      final userRef = _db.collection('users').doc(authorId);
 
-      transaction.set(postRef, {
-        'authorId': authorId,
-        'authorName': authorName,
-        'authorAvatar': authorAvatar,
-        'caption': caption,
-        'imageUrl': imageUrl,
-        'likesCount': 0,
-        'likedBy': [], // 🔥 UNIQUE LIKE TRACKING
-        'commentsCount': 0,
-        'viewCount': 0,
-        'isClubPost': false,
-        'clubName': '',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      await _db.runTransaction((transaction) async {
+        transaction.set(postRef, {
+          'authorId': authorId,
+          'authorName': authorName,
+          'authorAvatar': authorAvatar,
+          'caption': caption,
+          'imageUrl': imageUrl,
+          'likesCount': 0,
+          'likedBy': [],
+          'commentsCount': 0,
+          'viewCount': 0,
+          'isClubPost': false,
+          'clubName': '',
+          'createdAt': Timestamp.now(), // ✅ FIXED
+        });
 
-      transaction.update(userRef, {
-        'NoOfPosts': FieldValue.increment(1),
+        transaction.update(userRef, {
+          'NoOfPosts': FieldValue.increment(1),
+        });
       });
-    });
   }
 
   /// TOGGLE LIKE (UNIQUE PER USER)
