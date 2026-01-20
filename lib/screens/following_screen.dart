@@ -63,6 +63,10 @@ class FollowingScreen extends StatelessWidget {
                         ),
                       );
                     },
+                    trailing: OutlinedButton(
+                      onPressed: () {},
+                      child: const Text('Message'),
+                    ),
                   );
                 },
               );

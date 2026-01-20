@@ -53,6 +53,15 @@ class FollowersScreen extends StatelessWidget {
                               : null,
                     ),
                     title: Text(user['name'] ?? ''),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                             ProfileScreen(userId: followingUserId),
+                        ),
+                      );
+                    },
                     trailing: OutlinedButton(
                       onPressed: () {},
                       child: const Text('Message'),
