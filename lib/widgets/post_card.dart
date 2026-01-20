@@ -1,3 +1,4 @@
+import '../screens/profile.dart';
 import 'package:flutter/material.dart';
 import '../services/post_service.dart';
 import '../screens/comment_screen.dart';
@@ -127,24 +128,46 @@ class PostCard extends StatelessWidget {
           /// HEADER
           Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage:
-                    NetworkImage(authorAvatar),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  authorName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(userId: authorId),
+                    ),
+                  );
+                },
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundImage:
+                  NetworkImage(authorAvatar),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: () => _openOptions(context),
-              ),
+             const SizedBox(width: 10),
+
+             Expanded(
+               child: GestureDetector(
+                 onTap: () {
+                   Navigator.push(
+                     context,
+                     MaterialPageRoute(
+                       builder: (_) => ProfileScreen(userId: authorId),
+                     ),
+                   );
+                 },
+                 child: Text(
+                   authorName,
+                   style: const TextStyle(
+                     fontWeight: FontWeight.w600,
+                   ),
+                   overflow: TextOverflow.ellipsis,
+                 ),
+               ),
+             ),
+             IconButton(
+               icon: const Icon(Icons.more_vert),
+               onPressed: () => _openOptions(context),
+             ),
             ],
           ),
 

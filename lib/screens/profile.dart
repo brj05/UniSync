@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/session_service.dart';
+import '../services/follow_service.dart';
 import '../widgets/home_app_bar.dart';
 import '../widgets/post_card.dart';
 import 'edit_profile.dart';
+import 'followers_screen.dart';
+import 'following_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId; // null → current user
@@ -19,18 +22,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   String? currentUserId;
   Map<String, dynamic>? currentUserData;
 
-  late TabController _tabController; // ✅ REQUIRED
+  late TabController _tabController;
+
+  final FollowService _followService = FollowService();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // ✅ REQUIRED
+    _tabController = TabController(length: 2, vsync: this);
     _loadSession();
   }
 
   @override
   void dispose() {
-    _tabController.dispose(); // ✅ REQUIRED
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -99,10 +104,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     CircleAvatar(
                       radius: 40,
                       backgroundColor: Colors.grey.shade300,
-                      backgroundImage:
-                          avatar.toString().isNotEmpty
-                              ? NetworkImage(avatar)
-                              : null,
+                      backgroundImage: avatar.toString().isNotEmpty
+                          ? NetworkImage(avatar)
+                          : null,
                     ),
                     const SizedBox(width: 24),
                     Expanded(
@@ -110,8 +114,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _stat('Posts', data['NoOfPosts'] ?? 0),
-                          _stat('Followers', data['followersCount'] ?? 0),
-                          _stat('Following', data['followingCount'] ?? 0),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      FollowersScreen(userId: profileUserId),
+                                ),
+                              );
+                            },
+                            child: _stat(
+                                'Followers', data['followersCount'] ?? 0),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => FollowingScreen(userId: profileUserId),
+                                ),
+                              );
+                            },
+                            child: _stat('Following', data['followingCount'] ?? 0),
+                          ),
                         ],
                       ),
                     ),
@@ -167,9 +193,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                     : Row(
                         children: [
                           Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {},
-                              child: const Text('Follow'),
+                            child: StreamBuilder<bool>(
+                              stream: _followService.isFollowing(
+                                currentUserId: currentUserId!,
+                                targetUserId: profileUserId,
+                              ),
+                              builder: (context, snapshot) {
+                                final isFollowing =
+                                    snapshot.data ?? false;
+
+                                return ElevatedButton(
+                                  onPressed: () async {
+                                    if (isFollowing) {
+                                      await _followService.unfollowUser(
+                                        currentUserId: currentUserId!,
+                                        targetUserId: profileUserId,
+                                      );
+                                    } else {
+                                      await _followService.followUser(
+                                        currentUserId: currentUserId!,
+                                        targetUserId: profileUserId,
+                                      );
+                                    }
+                                  },
+                                  child: Text(
+                                      isFollowing ? 'Following' : 'Follow'),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -185,7 +235,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               const SizedBox(height: 12),
 
-              /// TAB BAR (RESTORED)
+              /// TAB BAR
               TabBar(
                 controller: _tabController,
                 indicatorColor: Colors.black,
@@ -225,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// USER POSTS (LIST ONLY)
+  /// USER POSTS
   Widget _userPosts(String userId) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
