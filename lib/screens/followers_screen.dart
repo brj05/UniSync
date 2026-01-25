@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'profile.dart';
 
 class FollowersScreen extends StatelessWidget {
   final String userId;
@@ -30,7 +31,7 @@ class FollowersScreen extends StatelessWidget {
           return ListView.builder(
             itemCount: followers.length,
             itemBuilder: (context, index) {
-              final followerId = followers[index].id;
+              final followerId = followers[index].id; // ✅ correct ID
 
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
@@ -38,7 +39,7 @@ class FollowersScreen extends StatelessWidget {
                     .doc(followerId)
                     .get(),
                 builder: (context, userSnapshot) {
-                  if (!userSnapshot.hasData) {
+                  if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
                     return const SizedBox.shrink();
                   }
 
@@ -58,7 +59,7 @@ class FollowersScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                             ProfileScreen(userId: followingUserId),
+                              ProfileScreen(userId: followerId),
                         ),
                       );
                     },

@@ -17,25 +17,24 @@ class _HomeShellState extends State<HomeShell> {
 
   final List<Widget> _screens = const [
     HomeFeedScreen(),
-    SizedBox(), // Explore (later)
-    SizedBox(), // + handled via Navigator
-    TalkZoneScreen(),
+    SizedBox(),
+    SizedBox(),
+    TalkItOutScreen(), // ONLY place
     ProfileScreen(),
   ];
 
   void _onNavTap(int index) {
     if (index == 2) {
-      // 🔥 OPEN CREATE POST SCREEN
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => const CreatePostScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const CreatePostScreen()),
       );
       return;
     }
 
-    setState(() => _currentIndex = index);
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   @override
