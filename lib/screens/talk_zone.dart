@@ -189,7 +189,11 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
                     alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Column(
                       crossAxisAlignment:
-                          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          isMe ? CrossAxisAlignment.
+
+
+
+                          end : CrossAxisAlignment.start,
                       children: [
                         // 🔹 Anonymous Name
                         Padding(
@@ -205,7 +209,9 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
                           ),
                         ),
 
-                        // 🔹 Message Bubble
+                        //
+
+                        // Message Bubble
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           padding: const EdgeInsets.all(14),
