@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/home_app_bar.dart';
-import '../widgets/notification_tile.dart';
-import '../widgets/home_bottom_nav.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/session_service.dart';
+import 'talk_zone.dart';
+
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
@@ -19,81 +21,91 @@ class _NotificationScreenState extends State<NotificationScreen>
     _tabController = TabController(length: 3, vsync: this);
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
   List<Widget> _buildNotifications() {
-    switch (_tabController.index) {
-      /// 🔔 PERSONAL
-      case 0:
-        return const [
-          NotificationTile(
-            avatar: 'https://i.pravatar.cc/150?img=1',
-            title: 'Aarav liked your post',
-            time: '2h',
-          ),
-          NotificationTile(
-            avatar: 'https://i.pravatar.cc/150?img=2',
-            title: 'Priya commented on your post',
-            time: '5h',
-          ),
-        ];
-
-      /// 🏫 CLUB
-      case 1:
-        return const [
-          NotificationTile(
-            avatar: 'https://i.pravatar.cc/150?img=4',
-            title: 'Photography Club posted an update',
-            subtitle: 'Marked as club collaboration',
-            time: '1h',
-          ),
-        ];
-
-      /// 🛡 ADMIN
-      case 2:
-        return const [
-          NotificationTile(
-            avatar: 'https://i.pravatar.cc/150?img=6',
-            title: 'Admin updated your score',
-            subtitle: 'Creativity score increased',
-            time: 'Yesterday',
-          ),
-        ];
-
-      default:
-        return [];
+    if (_tabController.index != 0) {
+      return const [Center(child: Text("No data"))];
     }
+
+    return [
+      FutureBuilder<Map<String, String>?>(
+        future: SessionService.getSession(),
+        builder: (context, sessionSnap) {
+          if (!sessionSnap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final session = sessionSnap.data;
+          if (session == null) {
+            return const Center(child: Text("User not logged in"));
+          }
+
+          final userId = session['phone'];
+
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(userId)
+                .collection('notifications')
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snap) {
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final docs = snap.data!.docs;
+
+              if (docs.isEmpty) {
+                return const Center(child: Text("No notifications"));
+              }
+
+              return Column(
+                children: docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+
+                  return ListTile(
+                    title: Text(
+                      '${data['creatorAnon']} started a TalkItOut',
+                    ),
+                    trailing: TextButton(
+                      child: const Text("Join"),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TalkItOutScreen(
+                              sessionIdFromNotification:
+                                  data['sessionId'],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          );
+        },
+      ),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
       appBar: buildHomeAppBar(context),
       body: Column(
         children: [
-          /// TAB BAR
-          Material(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: const Color(0xFF8B5CF6),
-              labelColor: Colors.black,
-              unselectedLabelColor: Colors.grey,
-              onTap: (_) => setState(() {}), // 🔥 KEY LINE
-              tabs: const [
-                Tab(text: 'Personal'),
-                Tab(text: 'Clubs'),
-                Tab(text: 'Admin'),
-              ],
-            ),
+          TabBar(
+            controller: _tabController,
+            onTap: (_) => setState(() {}),
+            tabs: const [
+              Tab(text: 'Personal'),
+              Tab(text: 'Clubs'),
+              Tab(text: 'Admin'),
+            ],
           ),
-
-          /// DYNAMIC CONTENT
           Expanded(
             child: ListView(
               children: _buildNotifications(),

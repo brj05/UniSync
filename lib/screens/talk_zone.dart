@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/anonymous_name.dart';
+import '../services/session_service.dart';
 
 class TalkItOutScreen extends StatefulWidget {
-  const TalkItOutScreen({super.key});
+  final String? sessionIdFromNotification;
+
+  const TalkItOutScreen({super.key, this.sessionIdFromNotification});
 
   @override
   State<TalkItOutScreen> createState() => _TalkItOutScreenState();
@@ -14,14 +16,31 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
   String? sessionId;
   String? anonName;
   bool inChat = false;
-  bool isCreator = true; // creator-side for now
+  bool isCreator = false;
+
+  String userId = "";
 
   final TextEditingController _msgCtrl = TextEditingController();
 
-  String get userId => FirebaseAuth.instance.currentUser!.uid;
+  @override
+  void initState() {
+    super.initState();
+    _initUser();
+  }
+
+  Future<void> _initUser() async {
+    final session = await SessionService.getSession();
+    userId = session?['phone'] ?? "";
+
+    if (widget.sessionIdFromNotification != null) {
+      joinSession(widget.sessionIdFromNotification!);
+    }
+  }
 
   // ================= CREATE SESSION =================
   Future<void> _startSession() async {
+    if (userId.isEmpty) return;
+
     anonName = AnonymousName.generate();
 
     final ref =
@@ -30,6 +49,7 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     setState(() {
       sessionId = ref.id;
       inChat = true;
+      isCreator = true;
     });
 
     await ref.set({
@@ -41,9 +61,52 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     await ref.collection('participants').doc(userId).set({
       'anon': anonName,
     });
+
+    // 🔥 SEND NOTIFICATIONS
+    final usersSnapshot =
+        await FirebaseFirestore.instance.collection('users').get();
+
+    for (var user in usersSnapshot.docs) {
+      final targetUserId = user.id;
+
+      if (targetUserId == userId) continue;
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetUserId)
+          .collection('notifications')
+          .add({
+        'type': 'talkitout_invite',
+        'sessionId': sessionId,
+        'creatorAnon': anonName,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
   }
 
-  // ================= SEND MESSAGE =================
+  // ================= JOIN =================
+  Future<void> joinSession(String id) async {
+    if (userId.isEmpty) return;
+
+    anonName = AnonymousName.generate();
+
+    setState(() {
+      sessionId = id;
+      inChat = true;
+      isCreator = false;
+    });
+
+    await FirebaseFirestore.instance
+        .collection('talkitout_sessions')
+        .doc(id)
+        .collection('participants')
+        .doc(userId)
+        .set({
+      'anon': anonName,
+    });
+  }
+
+  // ================= SEND =================
   Future<void> _sendMessage() async {
     if (_msgCtrl.text.trim().isEmpty || sessionId == null) return;
 
@@ -60,7 +123,7 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     _msgCtrl.clear();
   }
 
-  // ================= END / LEAVE =================
+  // ================= EXIT =================
   Future<void> _exitChat() async {
     if (sessionId == null) return;
 
@@ -92,36 +155,25 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
       backgroundColor: const Color(0xFFFFF6EC),
       appBar: AppBar(
         backgroundColor: const Color(0xFF8B5CF6),
+        title: const Text(
+          'TALK IT OUT ZONE',
+          style: TextStyle(color: Colors.white),
+        ),
         leading: inChat
             ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  Navigator.pop(context); // ✅ ONLY NAVIGATION
-                },
+                onPressed: () => Navigator.pop(context),
               )
             : null,
-        title: const Text(
-          'TALK IT OUT ZONE',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            letterSpacing: 0.5,
-          ),
-        ),
         actions: inChat
             ? [
                 TextButton(
                   onPressed: _exitChat,
                   child: Text(
                     isCreator ? 'End' : 'Leave',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(color: Colors.white),
                   ),
-                ),
+                )
               ]
             : [],
       ),
@@ -129,7 +181,6 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     );
   }
 
-  // ================= ENTRY =================
   Widget _entryUI() {
     return Center(
       child: GestureDetector(
@@ -146,12 +197,7 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
           child: const Center(
             child: Text(
               "Let's Talk",
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 26,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
         ),
@@ -159,7 +205,6 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     );
   }
 
-  // ================= CHAT =================
   Widget _chatUI() {
     return Column(
       children: [
@@ -186,48 +231,24 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
                   final isMe = msg['sender'] == anonName;
 
                   return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Column(
                       crossAxisAlignment:
-                          isMe ? CrossAxisAlignment.
-
-
-
-                          end : CrossAxisAlignment.start,
+                          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                       children: [
-                        // 🔹 Anonymous Name
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 2, left: 6, right: 6),
-                          child: Text(
-                            msg['sender'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'Poppins',
-                              color: Colors.black54,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-
-                        //
-
-                        // Message Bubble
+                        Text(msg['sender'] ?? '',
+                            style: const TextStyle(fontSize: 11)),
                         Container(
+                          padding: const EdgeInsets.all(12),
                           margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: isMe
                                 ? const Color(0xFF93C5FD)
                                 : const Color(0xFFA5B4FC),
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Text(
-                            msg['text'],
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 15,
-                            ),
-                          ),
+                          child: Text(msg['text'] ?? ''),
                         ),
                       ],
                     ),
@@ -238,30 +259,21 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
           ),
         ),
 
-        // ================= INPUT BAR =================
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          color: const Color(0xFFEDE9FE),
+        Padding(
+          padding: const EdgeInsets.all(8),
           child: Row(
             children: [
               Expanded(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: TextField(
-                    controller: _msgCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Type here...',
-                      border: InputBorder.none,
+                child: TextField(
+                  controller: _msgCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Type here...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.send),
                 onPressed: _sendMessage,
