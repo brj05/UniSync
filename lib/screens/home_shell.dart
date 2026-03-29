@@ -3,6 +3,7 @@ import 'home_feed.dart';
 import 'create_post.dart';
 import 'talk_zone.dart';
 import 'profile.dart';
+import 'search_screen.dart';
 import '../widgets/home_bottom_nav.dart';
 
 class HomeShell extends StatefulWidget {
@@ -17,7 +18,7 @@ class _HomeShellState extends State<HomeShell> {
 
   final List<Widget> _screens = const [
     HomeFeedScreen(),
-    SizedBox(),
+    SearchScreen(),
     SizedBox(),
     TalkItOutScreen(), // ONLY place
     ProfileScreen(),

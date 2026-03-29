@@ -33,7 +33,53 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     userId = session?['phone'] ?? "";
 
     if (widget.sessionIdFromNotification != null) {
-      joinSession(widget.sessionIdFromNotification!);
+      await joinSession(widget.sessionIdFromNotification!);
+    } else {
+      await _restoreSession();
+    }
+  }
+
+  // ================= RESTORE SESSION =================
+  Future<void> _restoreSession() async {
+    if (userId.isEmpty) return;
+
+    final sessions = await FirebaseFirestore.instance
+        .collection('talkitout_sessions')
+        .where('active', isEqualTo: true)
+        .get();
+
+    for (var doc in sessions.docs) {
+      final data = doc.data();
+
+      if (data['creatorId'] == userId) {
+        final participantDoc = await doc.reference
+            .collection('participants')
+            .doc(userId)
+            .get();
+
+        setState(() {
+          sessionId = doc.id;
+          anonName = participantDoc.data()?['anon'];
+          inChat = true;
+          isCreator = true;
+        });
+        return;
+      }
+
+      final participantDoc = await doc.reference
+          .collection('participants')
+          .doc(userId)
+          .get();
+
+      if (participantDoc.exists) {
+        setState(() {
+          sessionId = doc.id;
+          anonName = participantDoc.data()?['anon'];
+          inChat = true;
+          isCreator = false;
+        });
+        return;
+      }
     }
   }
 
@@ -62,7 +108,6 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
       'anon': anonName,
     });
 
-    // 🔥 SEND NOTIFICATIONS
     final usersSnapshot =
         await FirebaseFirestore.instance.collection('users').get();
 
@@ -84,25 +129,47 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     }
   }
 
-  // ================= JOIN =================
+  // ================= JOIN (FIXED) =================
   Future<void> joinSession(String id) async {
     if (userId.isEmpty) return;
 
-    anonName = AnonymousName.generate();
+    final sessionRef = FirebaseFirestore.instance
+        .collection('talkitout_sessions')
+        .doc(id);
+
+    final sessionDoc = await sessionRef.get();
+
+    // 🔥 CHECK IF SESSION EXISTS
+    if (!sessionDoc.exists || sessionDoc.data()?['active'] != true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("This session no longer exists."),
+          ),
+        );
+      }
+      return;
+    }
+
+    final participantRef =
+        sessionRef.collection('participants').doc(userId);
+
+    final doc = await participantRef.get();
+
+    if (doc.exists) {
+      anonName = doc.data()?['anon'];
+    } else {
+      anonName = AnonymousName.generate();
+
+      await participantRef.set({
+        'anon': anonName,
+      });
+    }
 
     setState(() {
       sessionId = id;
       inChat = true;
       isCreator = false;
-    });
-
-    await FirebaseFirestore.instance
-        .collection('talkitout_sessions')
-        .doc(id)
-        .collection('participants')
-        .doc(userId)
-        .set({
-      'anon': anonName,
     });
   }
 
@@ -148,6 +215,15 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
     });
   }
 
+  // ================= SAFE BACK =================
+  void _handleBack() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushReplacementNamed(context, '/home'); // 🔥 change if your route differs
+    }
+  }
+
   // ================= UI =================
   @override
   Widget build(BuildContext context) {
@@ -162,7 +238,7 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
         leading: inChat
             ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
+                onPressed: _handleBack, // 🔥 FIXED
               )
             : null,
         actions: inChat
