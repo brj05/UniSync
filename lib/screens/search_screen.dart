@@ -4,7 +4,7 @@ import '../services/post_service.dart';
 import '../widgets/post_card.dart';
 import '../models/post_model.dart';
 import '../services/session_service.dart';
-// 🔥 IMPORT YOUR PROFILE SCREEN
+import 'club_public_profile_screen.dart';
 import '../screens/profile.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -248,7 +248,14 @@ class _SearchScreenState extends State<SearchScreen> {
                 title: Text(data['name'] ?? ""),
 
                 onTap: () {
-                  // 🔥 YOU CAN ADD CLUB SCREEN LATER
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClubPublicProfileScreen(
+                        clubId: doc.id,
+                      ),
+                    ),
+                  );
                 },
               );
             }).toList(),

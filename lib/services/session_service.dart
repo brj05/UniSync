@@ -34,4 +34,9 @@ class SessionService {
       'phone': prefs.getString(_phone)!,
     };
   }
+  //club related addition
+  static Future<String?> getPhone() async {
+    final session = await getSession();
+    return session?['phone'];
+  }
 }

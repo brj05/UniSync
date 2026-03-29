@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/session_service.dart';
 
 class CreateClubScreen extends StatefulWidget {
   const CreateClubScreen({super.key});
@@ -10,197 +12,97 @@ class CreateClubScreen extends StatefulWidget {
 class _CreateClubScreenState extends State<CreateClubScreen> {
   final nameController = TextEditingController();
   final descController = TextEditingController();
-  final memberController = TextEditingController();
-  final adminController = TextEditingController();
 
-  // TEMP USERS (later from Firestore "users" collection)
-  final List<String> allUsers = [
-    'Aarav Sharma',
-    'Priya Verma',
-    'Rohit Mehta',
-    'Neha Singh',
-    'Karan Patel',
-  ];
+  bool loading = false;
 
-  final List<String> selectedMembers = [];
-  String? selectedAdmin;
+  Future<void> _submitClubRequest() async {
+    final name = nameController.text.trim();
+    final desc = descController.text.trim();
 
-  List<String> memberSuggestions = [];
-  List<String> adminSuggestions = [];
-
-  void _searchMembers(String value) {
-    if (!value.contains('@')) {
-      setState(() => memberSuggestions = []);
+    if (name.isEmpty || desc.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
       return;
     }
 
-    final query = value.replaceAll('@', '').toLowerCase();
-    setState(() {
-      memberSuggestions = allUsers
-          .where((u) =>
-              u.toLowerCase().contains(query) &&
-              !selectedMembers.contains(u))
-          .toList();
-    });
-  }
+    setState(() => loading = true);
 
-  void _searchAdmin(String value) {
-    if (!value.contains('@')) {
-      setState(() => adminSuggestions = []);
-      return;
-    }
+    final phone = await SessionService.getPhone();
 
-    final query = value.replaceAll('@', '').toLowerCase();
-    setState(() {
-      adminSuggestions =
-          allUsers.where((u) => u.toLowerCase().contains(query)).toList();
+    await FirebaseFirestore.instance.collection('club_requests').add({
+      'name': name,
+      'about': desc,
+      'createdBy': phone,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
     });
+
+    setState(() => loading = false);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Club request sent for approval'),
+      ),
+    );
+
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Club'),
-      ),
+      appBar: AppBar(title: const Text('Create Club')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: ListView(
+        child: Column(
           children: [
-            /// CLUB NAME
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Club Name'),
-            ),
-
-            const SizedBox(height: 16),
-
-            /// DESCRIPTION
-            TextField(
-              controller: descController,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-
-            const SizedBox(height: 24),
-
-            /// ADD MEMBERS
-            const Text(
-              'Add Members',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-
-            TextField(
-              controller: memberController,
-              decoration: const InputDecoration(
-                hintText: 'Type @ to add members',
-              ),
-              onChanged: _searchMembers,
-            ),
-
-            if (memberSuggestions.isNotEmpty)
-              _suggestionBox(memberSuggestions, (user) {
-                setState(() {
-                  selectedMembers.add(user);
-                  memberController.clear();
-                  memberSuggestions = [];
-                });
-              }),
-
-            Wrap(
-              spacing: 8,
-              children: selectedMembers
-                  .map(
-                    (m) => Chip(
-                      label: Text(m),
-                      onDeleted: () =>
-                          setState(() => selectedMembers.remove(m)),
-                    ),
-                  )
-                  .toList(),
-            ),
-
-            const SizedBox(height: 24),
-
-            /// SELECT ADMIN
-            const Text(
-              'Select Admin for Approval',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-
-            TextField(
-              controller: adminController,
-              decoration: const InputDecoration(
-                hintText: 'Type @ to select admin',
-              ),
-              onChanged: _searchAdmin,
-            ),
-
-            if (adminSuggestions.isNotEmpty)
-              _suggestionBox(adminSuggestions, (user) {
-                setState(() {
-                  selectedAdmin = user;
-                  adminController.text = user;
-                  adminSuggestions = [];
-                });
-              }),
-
-            if (selectedAdmin != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Chip(
-                  label: Text('Admin: $selectedAdmin'),
-                  deleteIcon: const Icon(Icons.close),
-                  onDeleted: () => setState(() {
-                    selectedAdmin = null;
-                    adminController.clear();
-                  }),
+              decoration: InputDecoration(
+                labelText: 'Club Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-
-            const SizedBox(height: 40),
-
-            /// SUBMIT
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                labelText: 'About Club',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
             SizedBox(
-              height: 48,
+              width: double.infinity,
+              height: 52,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B5CF6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  'Request Club Creation',
-                  style: TextStyle(fontSize: 16),
-                ),
+                onPressed: loading ? null : _submitClubRequest,
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Request Club Creation',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _suggestionBox(
-    List<String> items,
-    Function(String) onTap,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(top: 6, bottom: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListView.builder(
-        shrinkWrap: true,
-        itemCount: items.length,
-        itemBuilder: (_, i) => ListTile(
-          title: Text(items[i]),
-          onTap: () => onTap(items[i]),
         ),
       ),
     );
