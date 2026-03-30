@@ -75,6 +75,32 @@ class PostModel {
 
   factory PostModel.fromFirestore(QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+<<<<<<< HEAD
     return PostModel.fromMap(data, id: doc.id);
+=======
+
+    return PostModel(
+      id: doc.id,
+      authorId: data['authorId'] ?? '',
+      authorName: data['authorName'] ?? 'Unknown',
+      authorAvatar: data['authorAvatar'] ??
+          'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff',
+      caption: data['caption'] ?? '',
+      imageUrl: data['imageUrl'] ?? '',
+      likesCount: data['likesCount'] ?? 0,
+      commentsCount: data['commentsCount'] ?? 0,
+      viewCount: data['viewCount'] ?? 0,
+      isClubPost: data['isClubPost'] ?? false,
+      clubName: data['clubName'] ?? '',
+      likedBy: List<String>.from(data['likedBy'] ?? []),
+      taggedAdminId: data['taggedAdminId'] ?? '',
+      taggedAdminName: data['taggedAdminName'] ?? '',
+      requestedHours: data['requestedHours'] ?? 0,
+      requestedMinutes: data['requestedMinutes'] ?? 0,
+      verificationDescription: data['verificationDescription'] ?? '',
+      verificationStatus: data['verificationStatus'] ?? '',
+      adminRemark: data['adminRemark'] ?? '',
+    );
+>>>>>>> b6afb048734d7750405735341072352abf5adc9f
   }
 }
