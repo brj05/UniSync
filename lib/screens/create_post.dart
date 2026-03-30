@@ -25,10 +25,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String? _authorId;
   String? _authorName;
   String? _authorAvatar;
-<<<<<<< HEAD
   String _authorRole = '';
-=======
->>>>>>> b6afb048734d7750405735341072352abf5adc9f
   List<Map<String, String>> _admins = [];
   String? _selectedAdminId;
   String? _selectedAdminName;
@@ -49,18 +46,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
-<<<<<<< HEAD
-  @override
-  void dispose() {
-    _captionController.dispose();
-    _hoursController.dispose();
-    _minutesController.dispose();
-    _verificationDescriptionController.dispose();
-    super.dispose();
-  }
-
-=======
->>>>>>> b6afb048734d7750405735341072352abf5adc9f
   Future<void> _loadUserData() async {
     final session = await SessionService.getSession();
     if (session == null) return;
@@ -85,24 +70,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (_authorRole == 'student') {
       await _loadAdmins();
     }
-  }
-
-  Future<void> _loadAdmins() async {
-    final snap = await FirebaseFirestore.instance
-        .collection('users')
-        .where('role', isEqualTo: 'admin')
-        .get();
-
-    setState(() {
-      _admins = snap.docs
-          .map(
-            (doc) => {
-              'id': doc.id,
-              'name': (doc.data()['name'] ?? 'Admin').toString(),
-            },
-          )
-          .toList();
-    });
   }
 
   Future<void> _loadAdmins() async {
@@ -253,7 +220,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 const Text('Add Image'),
               ],
             ),
-<<<<<<< HEAD
             if (_authorRole == 'student') ...[
               const SizedBox(height: 20),
               const Text(
@@ -313,65 +279,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ),
               ),
             ],
-=======
-            const SizedBox(height: 20),
-            const Text(
-              'Verification Request (Optional)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: _selectedAdminId,
-              decoration: _fieldDecoration('Tagged Admin'),
-              items: _admins
-                  .map(
-                    (admin) => DropdownMenuItem<String>(
-                      value: admin['id'],
-                      child: Text(admin['name'] ?? 'Admin'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                final selectedAdmin = _admins.firstWhere(
-                  (admin) => admin['id'] == value,
-                  orElse: () => {},
-                );
-                setState(() {
-                  _selectedAdminId = value;
-                  _selectedAdminName = selectedAdmin['name'];
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _hoursController,
-                    keyboardType: TextInputType.number,
-                    decoration: _fieldDecoration('Requested Hours'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _minutesController,
-                    keyboardType: TextInputType.number,
-                    decoration: _fieldDecoration('Requested Minutes'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _verificationDescriptionController,
-              maxLines: 4,
-              decoration: _fieldDecoration(
-                'Verification Description',
-                hintText: 'Why should this post be verified?',
-              ),
-            ),
->>>>>>> b6afb048734d7750405735341072352abf5adc9f
           ],
         ),
       ),
