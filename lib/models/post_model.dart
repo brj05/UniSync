@@ -13,6 +13,13 @@ class PostModel {
   final bool isClubPost;
   final String clubName;
   final List<String> likedBy;
+  final String taggedAdminId;
+  final String taggedAdminName;
+  final int requestedHours;
+  final int requestedMinutes;
+  final String verificationDescription;
+  final String verificationStatus;
+  final String adminRemark;
 
   PostModel({
     required this.id,
@@ -27,31 +34,47 @@ class PostModel {
     required this.isClubPost,
     required this.clubName,
     required this.likedBy,
+    required this.taggedAdminId,
+    required this.taggedAdminName,
+    required this.requestedHours,
+    required this.requestedMinutes,
+    required this.verificationDescription,
+    required this.verificationStatus,
+    required this.adminRemark,
   });
 
   bool isLikedBy(String userId) {
-    final List likedBy =
-        (this as dynamic).likedBy ?? [];
     return likedBy.contains(userId);
+  }
+
+  factory PostModel.fromMap(Map<String, dynamic> data, {String id = ''}) {
+    return PostModel(
+      id: id,
+      authorId: data['authorId']?.toString() ?? '',
+      authorName: data['authorName']?.toString() ?? 'Unknown',
+      authorAvatar: data['authorAvatar']?.toString() ??
+          'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff',
+      caption: data['caption']?.toString() ?? '',
+      imageUrl: data['imageUrl']?.toString() ?? '',
+      likesCount: (data['likesCount'] ?? 0) as int,
+      commentsCount: (data['commentsCount'] ?? 0) as int,
+      viewCount: (data['viewCount'] ?? 0) as int,
+      isClubPost: data['isClubPost'] == true,
+      clubName: data['clubName']?.toString() ?? '',
+      likedBy: List<String>.from(data['likedBy'] ?? []),
+      taggedAdminId: data['taggedAdminId']?.toString() ?? '',
+      taggedAdminName: data['taggedAdminName']?.toString() ?? '',
+      requestedHours: (data['requestedHours'] ?? 0) as int,
+      requestedMinutes: (data['requestedMinutes'] ?? 0) as int,
+      verificationDescription:
+          data['verificationDescription']?.toString() ?? '',
+      verificationStatus: data['verificationStatus']?.toString() ?? '',
+      adminRemark: data['adminRemark']?.toString() ?? '',
+    );
   }
 
   factory PostModel.fromFirestore(QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-
-    return PostModel(
-      id: doc.id,
-      authorId: data['authorId'] ?? '',
-      authorName: data['authorName'] ?? 'Unknown',
-      authorAvatar: data['authorAvatar'] ??
-          'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff',
-      caption: data['caption'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
-      likesCount: data['likesCount'] ?? 0,
-      commentsCount: data['commentsCount'] ?? 0,
-      viewCount: data['viewCount'] ?? 0,
-      isClubPost: data['isClubPost'] ?? false,
-      clubName: data['clubName'] ?? '',
-      likedBy: List<String>.from(data['likedBy'] ?? []),
-    );
+    return PostModel.fromMap(data, id: doc.id);
   }
 }

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/session_service.dart';
 import '../services/follow_service.dart';
 import '../widgets/home_app_bar.dart';
+import '../widgets/cc_score_card.dart';
 import '../widgets/post_card.dart';
 import 'edit_profile.dart';
 import 'followers_screen.dart';
@@ -20,6 +21,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   String? currentUserId;
+  String? currentUserRole;
   Map<String, dynamic>? currentUserData;
 
   late TabController _tabController;
@@ -44,6 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (session == null) return;
 
     currentUserId = session['phone'];
+    currentUserRole = session['role'];
 
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -86,6 +89,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
           final isOwnProfile = profileUserId == currentUserId;
+          final isAdmin = currentUserRole == 'admin';
+          final isStudentProfile = data['role'] == 'student';
+          final canViewCC = isStudentProfile && (isOwnProfile || isAdmin);
 
           final avatar = data['avatar'] ?? '';
           final name =
@@ -235,6 +241,17 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               const SizedBox(height: 12),
 
+              if (canViewCC) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: CCScoreCard(
+                    profileUserId: profileUserId,
+                    canView: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               /// TAB BAR
               TabBar(
                 controller: _tabController,
@@ -306,21 +323,31 @@ class _ProfileScreenState extends State<ProfileScreen>
           itemBuilder: (context, index) {
             final post = posts[index];
             final data = post.data() as Map<String, dynamic>;
+            final authorId = data['authorId']?.toString() ?? '';
+            final authorName = data['authorName']?.toString() ?? '';
+            final authorAvatar = data['authorAvatar']?.toString() ?? '';
+            final caption = data['caption']?.toString() ?? '';
+            final imageUrl = data['imageUrl']?.toString() ?? '';
+            final clubName = data['clubName']?.toString() ?? '';
+            final currentUserName =
+                currentUserData?['name']?.toString() ?? '';
+            final currentUserAvatar =
+                currentUserData?['avatar']?.toString() ?? '';
 
             return PostCard(
-              postId: post.id,
-              authorId: data['authorId'],
+              postId: post.id.toString(),
+              authorId: authorId,
               currentUserId: currentUserId!,
-              currentUserName: currentUserData!['name'],
-              currentUserAvatar: currentUserData!['avatar'],
-              authorName: data['authorName'],
-              authorAvatar: data['authorAvatar'],
-              caption: data['caption'],
-              imageUrl: data['imageUrl'],
+              currentUserName: currentUserName,
+              currentUserAvatar: currentUserAvatar,
+              authorName: authorName,
+              authorAvatar: authorAvatar,
+              caption: caption,
+              imageUrl: imageUrl,
               likes: data['likesCount'] ?? 0,
               comments: data['commentsCount'] ?? 0,
               views: data['viewCount'] ?? 0,
-              clubName: data['clubName'],
+              clubName: clubName,
               isLiked:
                   (data['likedBy'] ?? []).contains(currentUserId),
             );

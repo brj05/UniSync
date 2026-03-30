@@ -139,8 +139,10 @@ class PostCard extends StatelessWidget {
                 },
                 child: CircleAvatar(
                   radius: 20,
-                  backgroundImage:
-                  NetworkImage(authorAvatar),
+                  backgroundColor: Colors.grey.shade300,
+                  backgroundImage: authorAvatar.trim().isNotEmpty
+                      ? NetworkImage(authorAvatar)
+                      : null,
                 ),
               ),
              const SizedBox(width: 10),
@@ -176,7 +178,7 @@ class PostCard extends StatelessWidget {
             Text(caption),
           ],
 
-          if (imageUrl != null && imageUrl!.trim().isNotEmpty) ...[
+          if ((imageUrl ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
