@@ -13,6 +13,13 @@ class PostModel {
   final bool isClubPost;
   final String clubName;
   final List<String> likedBy;
+  final String taggedAdminId;
+  final String taggedAdminName;
+  final int requestedHours;
+  final int requestedMinutes;
+  final String verificationDescription;
+  final String verificationStatus;
+  final String adminRemark;
 
   PostModel({
     required this.id,
@@ -27,11 +34,16 @@ class PostModel {
     required this.isClubPost,
     required this.clubName,
     required this.likedBy,
+    required this.taggedAdminId,
+    required this.taggedAdminName,
+    required this.requestedHours,
+    required this.requestedMinutes,
+    required this.verificationDescription,
+    required this.verificationStatus,
+    required this.adminRemark,
   });
 
   bool isLikedBy(String userId) {
-    final List likedBy =
-        (this as dynamic).likedBy ?? [];
     return likedBy.contains(userId);
   }
 
@@ -52,6 +64,13 @@ class PostModel {
       isClubPost: data['isClubPost'] ?? false,
       clubName: data['clubName'] ?? '',
       likedBy: List<String>.from(data['likedBy'] ?? []),
+      taggedAdminId: data['taggedAdminId'] ?? '',
+      taggedAdminName: data['taggedAdminName'] ?? '',
+      requestedHours: data['requestedHours'] ?? 0,
+      requestedMinutes: data['requestedMinutes'] ?? 0,
+      verificationDescription: data['verificationDescription'] ?? '',
+      verificationStatus: data['verificationStatus'] ?? '',
+      adminRemark: data['adminRemark'] ?? '',
     );
   }
 }
