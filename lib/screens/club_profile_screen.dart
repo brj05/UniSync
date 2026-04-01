@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/session_service.dart';
 import 'club_public_profile_screen.dart';
+import 'personal_chat_screen.dart';
 class ClubProfileScreen extends StatefulWidget {
   final String clubId;
 
@@ -117,6 +118,27 @@ class _ClubProfileScreenState extends State<ClubProfileScreen>
     if (mounted) {
       Navigator.pop(context);
     }
+  }
+
+  void _openPersonalChat({
+    required String receiverId,
+    required String receiverName,
+    required String? receiverPhotoUrl,
+  }) {
+    if (myPhone == null || receiverId == myPhone) {
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PersonalChatScreen(
+          receiverId: receiverId,
+          receiverName: receiverName,
+          receiverPhotoUrl: receiverPhotoUrl,
+        ),
+      ),
+    );
   }
 
   void _showClubMenu() {
@@ -375,6 +397,8 @@ class _ClubProfileScreenState extends State<ClubProfileScreen>
                     {};
 
                 final name = userData['name'] ?? memberPhone;
+                final avatar = userData['avatar']?.toString();
+                final isCurrentUser = memberPhone == myPhone;
 
                 String role = '';
                 if (memberPhone == creatorPhone) {
@@ -418,19 +442,19 @@ class _ClubProfileScreenState extends State<ClubProfileScreen>
                             ),
                           )
                         : null,
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.message_outlined,
-                        color: Color(0xFF8B5CF6),
-                      ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Open chat with $name'),
+                    trailing: isCurrentUser
+                        ? null
+                        : IconButton(
+                            icon: const Icon(
+                              Icons.message_outlined,
+                              color: Color(0xFF8B5CF6),
+                            ),
+                            onPressed: () => _openPersonalChat(
+                              receiverId: memberPhone,
+                              receiverName: name.toString(),
+                              receiverPhotoUrl: avatar,
+                            ),
                           ),
-                        );
-                      },
-                    ),
                   ),
                 );
               },

@@ -8,6 +8,7 @@ import '../widgets/post_card.dart';
 import 'edit_profile.dart';
 import 'followers_screen.dart';
 import 'following_screen.dart';
+import 'personal_chat_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId; // null → current user
@@ -58,6 +59,23 @@ class _ProfileScreenState extends State<ProfileScreen>
     currentUserData = userDoc.data();
 
     if (mounted) setState(() {});
+  }
+
+  void _openPersonalChat({
+    required String receiverId,
+    required String receiverName,
+    required String? receiverPhotoUrl,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PersonalChatScreen(
+          receiverId: receiverId,
+          receiverName: receiverName,
+          receiverPhotoUrl: receiverPhotoUrl,
+        ),
+      ),
+    );
   }
 
   @override
@@ -231,7 +249,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                           const SizedBox(width: 10),
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () {},
+                              onPressed: () => _openPersonalChat(
+                                receiverId: profileUserId,
+                                receiverName: (name ?? '').toString(),
+                                receiverPhotoUrl: avatar?.toString(),
+                              ),
                               child: const Text('Message'),
                             ),
                           ),

@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isParticipant(participants) {
+      return isSignedIn() && request.auth.uid in participants;
+    }
+
+    function isValidChatId(chatId, participants) {
+      return participants.size() == 2 &&
+          chatId == (
+            participants[0] < participants[1]
+              ? participants[0] + "_" + participants[1]
+              : participants[1] + "_" + participants[0]
+          );
+    }
+
+    match /chats/{chatId} {
+      allow read: if isParticipant(resource.data.participants);
+
+      allow create: if isSignedIn() &&
+          isParticipant(request.resource.data.participants) &&
+          isValidChatId(chatId, request.resource.data.participants) &&
+          request.resource.data.keys().hasOnly([
+            'participants',
+            'lastMessage',
+            'lastMessageTime',
+            'createdAt',
+          ]);
+
+      allow update: if isParticipant(resource.data.participants) &&
+          request.resource.data.participants == resource.data.participants &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.keys().hasOnly([
+            'participants',
+            'lastMessage',
+            'lastMessageTime',
+            'createdAt',
+          ]);
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isParticipant(
+          get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+        );
+
+        allow create: if isParticipant(
+            get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+          ) &&
+          request.resource.data.keys().hasOnly([
+            'senderId',
+            'receiverId',
+            'text',
+            'timestamp',
+            'createdAt',
+            'expiresAt',
+          ]) &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.senderId != request.resource.data.receiverId &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 4000 &&
+          request.resource.data.timestamp is timestamp &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.expiresAt is timestamp &&
+          request.resource.data.expiresAt > request.resource.data.timestamp;
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}
