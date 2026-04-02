@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/anonymous_name.dart';
 import '../services/session_service.dart';
+import '../services/content_moderation_service.dart';
 
 class TalkItOutScreen extends StatefulWidget {
   final String? sessionIdFromNotification;
@@ -19,7 +20,7 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
   bool isCreator = false;
 
   String userId = "";
-
+  final ContentModerationService _moderationService = ContentModerationService();
   final TextEditingController _msgCtrl = TextEditingController();
 
   @override
@@ -175,20 +176,70 @@ class _TalkItOutScreenState extends State<TalkItOutScreen> {
 
   // ================= SEND =================
   Future<void> _sendMessage() async {
-    if (_msgCtrl.text.trim().isEmpty || sessionId == null) return;
+  if (_msgCtrl.text.trim().isEmpty || sessionId == null) return;
 
-    await FirebaseFirestore.instance
-        .collection('talkitout_sessions')
-        .doc(sessionId)
-        .collection('messages')
-        .add({
-      'text': _msgCtrl.text.trim(),
-      'sender': anonName,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+  final text = _msgCtrl.text.trim();
 
-    _msgCtrl.clear();
+  final moderation = await _moderationService.moderate(
+    text,
+    type: 'talkitout',
+  );
+
+  if (!mounted) return;
+
+  if (moderation.status == ModerationStatus.blocked) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.red,
+        content: Text(
+          moderation.message.isNotEmpty
+              ? moderation.message
+              : 'This message contains offensive language and cannot be sent.',
+        ),
+      ),
+    );
+    return;
   }
+
+  if (moderation.status == ModerationStatus.warning) {
+    final proceed = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Warning'),
+            content: Text(
+              moderation.message.isNotEmpty
+                  ? moderation.message
+                  : 'This message may contain harsh language. Send anyway?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Send Anyway'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!proceed) return;
+  }
+
+  await FirebaseFirestore.instance
+      .collection('talkitout_sessions')
+      .doc(sessionId)
+      .collection('messages')
+      .add({
+    'text': text,
+    'sender': anonName,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+
+  _msgCtrl.clear();
+}
 
   // ================= EXIT =================
   Future<void> _exitChat() async {

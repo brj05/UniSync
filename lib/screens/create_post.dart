@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/post_service.dart';
 import '../services/session_service.dart';
+import '../services/content_moderation_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -17,7 +18,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _hoursController = TextEditingController();
   final _minutesController = TextEditingController();
   final _verificationDescriptionController = TextEditingController();
+
   final PostService _postService = PostService();
+  final ContentModerationService _moderationService =
+      ContentModerationService();
 
   File? _image;
   bool _loading = false;
@@ -114,31 +118,87 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
-    final requestedHours = int.tryParse(_hoursController.text.trim()) ?? 0;
-    final requestedMinutes = int.tryParse(_minutesController.text.trim()) ?? 0;
-    final verificationDescription =
-        _verificationDescriptionController.text.trim();
-
-    if (_hasVerificationInput) {
-      final hasAdmin = (_selectedAdminId ?? '').isNotEmpty;
-      final hasDuration = requestedHours > 0 || requestedMinutes > 0;
-      final hasDescription = verificationDescription.isNotEmpty;
-
-      if (!hasAdmin || !hasDuration || !hasDescription) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'To request verification, select an admin, enter hours or minutes, and add a description.',
-            ),
-          ),
-        );
-        return;
-      }
-    }
-
     setState(() => _loading = true);
 
     try {
+      // CONTENT MODERATION FOR POST CAPTION
+      final moderation = await _moderationService.moderate(
+        _captionController.text.trim(),
+        type: 'post',
+      );
+
+      if (!mounted) return;
+
+      if (moderation.status == ModerationStatus.blocked) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              moderation.message.isNotEmpty
+                  ? moderation.message
+                  : 'This post contains offensive or abusive language and cannot be posted.',
+            ),
+          ),
+        );
+
+        setState(() => _loading = false);
+        return;
+      }
+
+      if (moderation.status == ModerationStatus.warning) {
+        final proceed = await showDialog<bool>(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text('Warning'),
+                content: Text(
+                  moderation.message.isNotEmpty
+                      ? moderation.message
+                      : 'This post may contain harsh or inappropriate language. Do you still want to post it?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Post Anyway'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+
+        if (!proceed) {
+          setState(() => _loading = false);
+          return;
+        }
+      }
+
+      final requestedHours = int.tryParse(_hoursController.text.trim()) ?? 0;
+      final requestedMinutes =
+          int.tryParse(_minutesController.text.trim()) ?? 0;
+      final verificationDescription =
+          _verificationDescriptionController.text.trim();
+
+      if (_hasVerificationInput) {
+        final hasAdmin = (_selectedAdminId ?? '').isNotEmpty;
+        final hasDuration = requestedHours > 0 || requestedMinutes > 0;
+        final hasDescription = verificationDescription.isNotEmpty;
+
+        if (!hasAdmin || !hasDuration || !hasDescription) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'To request verification, select an admin, enter hours or minutes, and add a description.',
+              ),
+            ),
+          );
+          setState(() => _loading = false);
+          return;
+        }
+      }
+
       await _postService.createPost(
         authorId: _authorId!,
         authorName: _authorName!,
@@ -203,82 +263,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 border: InputBorder.none,
               ),
             ),
-            const SizedBox(height: 12),
-            if (_image != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(_image!, height: 220, fit: BoxFit.cover),
-              ),
-              const SizedBox(height: 16),
-            ],
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.image_outlined),
-                  onPressed: _pickImage,
-                ),
-                const Text('Add Image'),
-              ],
-            ),
-            if (_authorRole == 'student') ...[
-              const SizedBox(height: 20),
-              const Text(
-                'Verification Request (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedAdminId,
-                decoration: _fieldDecoration('Tagged Admin'),
-                items: _admins
-                    .map(
-                      (admin) => DropdownMenuItem<String>(
-                        value: admin['id'],
-                        child: Text(admin['name'] ?? 'Admin'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  final selectedAdmin = _admins.firstWhere(
-                    (admin) => admin['id'] == value,
-                    orElse: () => {},
-                  );
-                  setState(() {
-                    _selectedAdminId = value;
-                    _selectedAdminName = selectedAdmin['name'];
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _hoursController,
-                      keyboardType: TextInputType.number,
-                      decoration: _fieldDecoration('Requested Hours'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _minutesController,
-                      keyboardType: TextInputType.number,
-                      decoration: _fieldDecoration('Requested Minutes'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _verificationDescriptionController,
-                maxLines: 4,
-                decoration: _fieldDecoration(
-                  'Verification Description',
-                  hintText: 'Why should this post be verified?',
-                ),
-              ),
-            ],
           ],
         ),
       ),

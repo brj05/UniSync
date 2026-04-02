@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/post_service.dart';
+import '../services/content_moderation_service.dart';
 
 class CommentScreen extends StatefulWidget {
   final String postId;
-  final String userId;        // current user
+  final String userId;
   final String username;
   final String avatar;
-  final String postAuthorId;  // 🔹 NEW
+  final String postAuthorId;
 
   const CommentScreen({
     super.key,
@@ -24,6 +25,7 @@ class CommentScreen extends StatefulWidget {
 class _CommentScreenState extends State<CommentScreen> {
   final controller = TextEditingController();
   final service = PostService();
+  final moderationService = ContentModerationService();
 
   void _confirmDelete(String commentId) {
     showDialog(
@@ -54,6 +56,69 @@ class _CommentScreenState extends State<CommentScreen> {
     );
   }
 
+  Future<void> _sendComment() async {
+    final text = controller.text.trim();
+    if (text.isEmpty) return;
+
+    final result = await moderationService.moderate(
+      text,
+      type: 'comment',
+    );
+
+    if (!mounted) return;
+
+    if (result.status == ModerationStatus.blocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            result.message.isNotEmpty
+                ? result.message
+                : 'This comment contains abusive or offensive language.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (result.status == ModerationStatus.warning) {
+      final proceed = await showDialog<bool>(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('Warning'),
+              content: Text(
+                result.message.isNotEmpty
+                    ? result.message
+                    : 'This comment may be inappropriate. Post anyway?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Post Anyway'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (!proceed) return;
+    }
+
+    await service.addComment(
+      postId: widget.postId,
+      userId: widget.userId,
+      username: widget.username,
+      avatar: widget.avatar,
+      text: text,
+    );
+
+    controller.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,10 +137,8 @@ class _CommentScreenState extends State<CommentScreen> {
                   itemCount: docs.length,
                   itemBuilder: (_, i) {
                     final d = docs[i];
-
                     final commentUserId = d['userId'];
 
-                    /// ✅ Permission check
                     final canDelete =
                         commentUserId == widget.userId ||
                         widget.userId == widget.postAuthorId;
@@ -92,8 +155,7 @@ class _CommentScreenState extends State<CommentScreen> {
                                 Icons.delete_outline,
                                 color: Colors.red,
                               ),
-                              onPressed: () =>
-                                  _confirmDelete(d.id),
+                              onPressed: () => _confirmDelete(d.id),
                             )
                           : null,
                     );
@@ -102,8 +164,6 @@ class _CommentScreenState extends State<CommentScreen> {
               },
             ),
           ),
-
-          /// COMMENT INPUT
           Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
@@ -118,17 +178,7 @@ class _CommentScreenState extends State<CommentScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: () {
-                    if (controller.text.trim().isEmpty) return;
-                    service.addComment(
-                      postId: widget.postId,
-                      userId: widget.userId,
-                      username: widget.username,
-                      avatar: widget.avatar,
-                      text: controller.text.trim(),
-                    );
-                    controller.clear();
-                  },
+                  onPressed: _sendComment,
                 ),
               ],
             ),

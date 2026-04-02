@@ -129,10 +129,10 @@ class _PersonalChatScreenState extends State<PersonalChatScreen> {
     final photoUrl = widget.receiverPhotoUrl?.trim() ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEFE7DD),
+      backgroundColor: const Color(0xFFFFF6EC),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFF0F8C7B),
+        backgroundColor: const Color(0xFF8B5CF6),
         foregroundColor: Colors.white,
         titleSpacing: 0,
         title: Row(
@@ -236,8 +236,8 @@ class _PersonalChatScreenState extends State<PersonalChatScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: isMe
-                                    ? const Color(0xFFDCF7C5)
-                                    : Colors.white,
+                                    ? const Color(0xFF93C5FD)
+                                    : const Color(0xFFA5B4FC),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(18),
                                   topRight: const Radius.circular(18),
@@ -267,7 +267,7 @@ class _PersonalChatScreenState extends State<PersonalChatScreen> {
                                     _formatTime(timestamp),
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey.shade600,
+                                      color: const Color(0xFF4B5563),
                                     ),
                                   ),
                                 ],
@@ -283,7 +283,7 @@ class _PersonalChatScreenState extends State<PersonalChatScreen> {
                   top: false,
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                    color: const Color(0xFFF7F7F7),
+                    color: const Color(0xFFFFF0E1),
                     child: Row(
                       children: [
                         Expanded(
@@ -295,7 +295,7 @@ class _PersonalChatScreenState extends State<PersonalChatScreen> {
                             decoration: InputDecoration(
                               hintText: 'Type a message',
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: const Color(0xFFFFFFFF),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 12,
@@ -311,7 +311,7 @@ class _PersonalChatScreenState extends State<PersonalChatScreen> {
                         const SizedBox(width: 8),
                         CircleAvatar(
                           radius: 24,
-                          backgroundColor: const Color(0xFF0F8C7B),
+                          backgroundColor: const Color(0xFF8B5CF6),
                           child: IconButton(
                             onPressed: _isSending ? null : _sendMessage,
                             icon: Icon(
