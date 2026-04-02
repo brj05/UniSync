@@ -265,9 +265,9 @@ class _PersonalChatScreenState extends State<PersonalChatScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     _formatTime(timestamp),
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 11,
-                                      color: const Color(0xFF4B5563),
+                                      color: Color(0xFF4B5563),
                                     ),
                                   ),
                                 ],

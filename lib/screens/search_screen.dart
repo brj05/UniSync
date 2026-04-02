@@ -202,7 +202,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   );
                 },
               );
-            }).toList(),
+            }),
           ],
         );
       },
@@ -258,7 +258,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   );
                 },
               );
-            }).toList(),
+            }),
           ],
         );
       },

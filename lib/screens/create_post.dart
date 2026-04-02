@@ -232,6 +232,113 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
+  Widget _buildVerificationSection() {
+    if (_authorRole != 'student') {
+      return const SizedBox.shrink();
+    }
+
+    final hasAdmins = _admins.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFD7E3F4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_outlined, color: Color(0xFF1D4ED8)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Optional verification request',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Students can tag an admin here to request approved hours for this post.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _selectedAdminId,
+            decoration: _fieldDecoration('Select Admin'),
+            items: _admins
+                .map(
+                  (admin) => DropdownMenuItem<String>(
+                    value: admin['id'],
+                    child: Text(admin['name'] ?? 'Admin'),
+                  ),
+                )
+                .toList(),
+            onChanged: hasAdmins
+                ? (value) {
+                    final selectedAdmin = _admins.firstWhere(
+                      (admin) => admin['id'] == value,
+                      orElse: () => const {'id': '', 'name': ''},
+                    );
+
+                    setState(() {
+                      _selectedAdminId = value;
+                      _selectedAdminName = selectedAdmin['name'];
+                    });
+                  }
+                : null,
+            hint: Text(hasAdmins ? 'Choose an admin' : 'No admins available'),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _hoursController,
+                  keyboardType: TextInputType.number,
+                  decoration: _fieldDecoration(
+                    'Hours',
+                    hintText: '0',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _minutesController,
+                  keyboardType: TextInputType.number,
+                  decoration: _fieldDecoration(
+                    'Minutes',
+                    hintText: '0',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _verificationDescriptionController,
+            minLines: 3,
+            maxLines: 5,
+            decoration: _fieldDecoration(
+              'Verification Description',
+              hintText: 'Describe the activity so the admin can review it.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,14 +362,34 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            OutlinedButton.icon(
+              onPressed: _loading ? null : _pickImage,
+              icon: const Icon(Icons.image_outlined),
+              label: Text(_image == null ? 'Add Image' : 'Change Image'),
+            ),
+            if (_image != null) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.file(
+                  _image!,
+                  width: double.infinity,
+                  height: 220,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
             TextField(
               controller: _captionController,
               maxLines: null,
-              decoration: const InputDecoration(
+              decoration: _fieldDecoration(
+                'Caption',
                 hintText: "What's on your mind?",
-                border: InputBorder.none,
               ),
             ),
+            const SizedBox(height: 20),
+            _buildVerificationSection(),
           ],
         ),
       ),

@@ -523,8 +523,8 @@ class _ClubProfileScreenState extends State<ClubProfileScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(Icons.campaign,
                                 color: Color(0xFFB7791F)),
                             SizedBox(width: 8),
