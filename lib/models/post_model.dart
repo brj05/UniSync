@@ -13,6 +13,10 @@ class PostModel {
   final bool isClubPost;
   final String clubName;
   final List<String> likedBy;
+  final List<String> collaboratorNames;
+  final List<String> userCollaboratorIds;
+  final List<String> pendingUserCollaboratorIds;
+  final List<String> approvedClubCollaboratorIds;
   final String taggedAdminId;
   final String taggedAdminName;
   final int requestedHours;
@@ -34,6 +38,10 @@ class PostModel {
     required this.isClubPost,
     required this.clubName,
     required this.likedBy,
+    required this.collaboratorNames,
+    required this.userCollaboratorIds,
+    required this.pendingUserCollaboratorIds,
+    required this.approvedClubCollaboratorIds,
     required this.taggedAdminId,
     required this.taggedAdminName,
     required this.requestedHours,
@@ -62,6 +70,13 @@ class PostModel {
       isClubPost: data['isClubPost'] == true,
       clubName: data['clubName']?.toString() ?? '',
       likedBy: List<String>.from(data['likedBy'] ?? []),
+      collaboratorNames: List<String>.from(data['collaboratorNames'] ?? []),
+      userCollaboratorIds:
+          List<String>.from(data['userCollaboratorIds'] ?? []),
+      pendingUserCollaboratorIds:
+          List<String>.from(data['pendingUserCollaboratorIds'] ?? []),
+      approvedClubCollaboratorIds:
+          List<String>.from(data['approvedClubCollaboratorIds'] ?? []),
       taggedAdminId: data['taggedAdminId']?.toString() ?? '',
       taggedAdminName: data['taggedAdminName']?.toString() ?? '',
       requestedHours: (data['requestedHours'] ?? 0) as int,

@@ -92,6 +92,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                         clubName: post.isClubPost
                             ? post.clubName
                             : null,
+                        collaboratorNames: post.collaboratorNames,
                         isLiked: post.isLikedBy(currentUserId),
                       );
                     },

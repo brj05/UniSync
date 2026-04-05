@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/post_model.dart';
 import '../services/session_service.dart';
 import '../services/follow_service.dart';
+import '../services/post_service.dart';
 import '../widgets/home_app_bar.dart';
 import '../widgets/cc_score_card.dart';
 import '../widgets/post_card.dart';
@@ -316,62 +318,45 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   /// USER POSTS
   Widget _userPosts(String userId) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('posts')
-          .where('authorId', isEqualTo: userId)
-          .snapshots(),
+    return StreamBuilder<List<PostModel>>(
+      stream: PostService().streamPostsForUser(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('No posts yet'));
         }
 
-        final posts = snapshot.data!.docs.toList();
-
-        posts.sort((a, b) {
-          final aTime = a['createdAt'] as Timestamp?;
-          final bTime = b['createdAt'] as Timestamp?;
-          return (bTime?.millisecondsSinceEpoch ?? 0)
-              .compareTo(aTime?.millisecondsSinceEpoch ?? 0);
-        });
+        final posts = snapshot.data!;
 
         return ListView.builder(
           padding: const EdgeInsets.only(top: 8),
           itemCount: posts.length,
           itemBuilder: (context, index) {
             final post = posts[index];
-            final data = post.data() as Map<String, dynamic>;
-            final authorId = data['authorId']?.toString() ?? '';
-            final authorName = data['authorName']?.toString() ?? '';
-            final authorAvatar = data['authorAvatar']?.toString() ?? '';
-            final caption = data['caption']?.toString() ?? '';
-            final imageUrl = data['imageUrl']?.toString() ?? '';
-            final clubName = data['clubName']?.toString() ?? '';
             final currentUserName =
                 currentUserData?['name']?.toString() ?? '';
             final currentUserAvatar =
                 currentUserData?['avatar']?.toString() ?? '';
 
             return PostCard(
-              postId: post.id.toString(),
-              authorId: authorId,
+              postId: post.id,
+              authorId: post.authorId,
               currentUserId: currentUserId!,
               currentUserName: currentUserName,
               currentUserAvatar: currentUserAvatar,
-              authorName: authorName,
-              authorAvatar: authorAvatar,
-              caption: caption,
-              imageUrl: imageUrl,
-              likes: data['likesCount'] ?? 0,
-              comments: data['commentsCount'] ?? 0,
-              views: data['viewCount'] ?? 0,
-              clubName: clubName,
-              isLiked:
-                  (data['likedBy'] ?? []).contains(currentUserId),
+              authorName: post.authorName,
+              authorAvatar: post.authorAvatar,
+              caption: post.caption,
+              imageUrl: post.imageUrl,
+              likes: post.likesCount,
+              comments: post.commentsCount,
+              views: post.viewCount,
+              clubName: post.clubName,
+              collaboratorNames: post.collaboratorNames,
+              isLiked: post.isLikedBy(currentUserId!),
             );
           },
         );

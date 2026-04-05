@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/post_service.dart';
 import '../services/content_moderation_service.dart';
+import '../services/mention_service.dart';
+import '../widgets/mention_text_field.dart';
 
 class CommentScreen extends StatefulWidget {
   final String postId;
@@ -26,6 +28,22 @@ class _CommentScreenState extends State<CommentScreen> {
   final controller = TextEditingController();
   final service = PostService();
   final moderationService = ContentModerationService();
+  List<MentionCandidate> _mentionCandidates = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMentionCandidates();
+  }
+
+  Future<void> _loadMentionCandidates() async {
+    final users = await MentionService().fetchAllUsers();
+    if (!mounted) return;
+
+    setState(() {
+      _mentionCandidates = users;
+    });
+  }
 
   void _confirmDelete(String commentId) {
     showDialog(
@@ -169,10 +187,12 @@ class _CommentScreenState extends State<CommentScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: MentionTextField(
                     controller: controller,
+                    candidates: _mentionCandidates,
+                    excludeUserId: widget.userId,
                     decoration: const InputDecoration(
-                      hintText: 'Add a comment...',
+                      hintText: 'Add a comment... Use @ to tag',
                     ),
                   ),
                 ),

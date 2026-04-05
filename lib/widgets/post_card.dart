@@ -19,6 +19,7 @@ class PostCard extends StatelessWidget {
   final int comments;
   final int views;
   final String? clubName;
+  final List<String> collaboratorNames;
   final bool isLiked;
 
   const PostCard({
@@ -36,6 +37,7 @@ class PostCard extends StatelessWidget {
     required this.comments,
     required this.views,
     this.clubName,
+    this.collaboratorNames = const [],
     required this.isLiked,
   });
 
@@ -157,12 +159,26 @@ class PostCard extends StatelessWidget {
                      ),
                    );
                  },
-                 child: Text(
-                   authorName,
-                   style: const TextStyle(
-                     fontWeight: FontWeight.w600,
-                   ),
-                   overflow: TextOverflow.ellipsis,
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       authorName,
+                       style: const TextStyle(
+                         fontWeight: FontWeight.w600,
+                       ),
+                       overflow: TextOverflow.ellipsis,
+                     ),
+                     if (collaboratorNames.isNotEmpty)
+                       Text(
+                         'with ${collaboratorNames.join(', ')}',
+                         style: TextStyle(
+                           fontSize: 12,
+                           color: Colors.grey.shade700,
+                         ),
+                         overflow: TextOverflow.ellipsis,
+                       ),
+                   ],
                  ),
                ),
              ),

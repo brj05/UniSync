@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../models/post_model.dart';
+import '../services/post_service.dart';
 import '../services/session_service.dart';
 import 'club_profile_screen.dart';
 
@@ -19,6 +21,7 @@ class ClubPublicProfileScreen extends StatefulWidget {
 class _ClubPublicProfileScreenState extends State<ClubPublicProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final PostService _postService = PostService();
 
   String? myPhone;
   bool loading = true;
@@ -93,7 +96,8 @@ class _ClubPublicProfileScreenState extends State<ClubPublicProfileScreen>
 
         final clubName = clubData['name'] ?? 'Club';
         final about = clubData['about'] ?? '';
-        final adminName = clubData['adminName'] ?? 'Club Admin';
+        final adminName =
+            clubData['creatorName'] ?? clubData['adminName'] ?? 'Club Admin';
 
         final members = List<String>.from(clubData['members'] ?? []);
         final followers = List<String>.from(clubData['followers'] ?? []);
@@ -286,13 +290,8 @@ class _ClubPublicProfileScreenState extends State<ClubPublicProfileScreen>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('clubs')
-                            .doc(widget.clubId)
-                            .collection('posts')
-                            .orderBy('time', descending: true)
-                            .snapshots(),
+                      StreamBuilder<List<PostModel>>(
+                        stream: _postService.streamPostsForClub(widget.clubId),
                         builder: (context, postSnapshot) {
                           if (!postSnapshot.hasData) {
                             return const Center(
@@ -300,7 +299,7 @@ class _ClubPublicProfileScreenState extends State<ClubPublicProfileScreen>
                             );
                           }
 
-                          final posts = postSnapshot.data!.docs;
+                          final posts = postSnapshot.data!;
 
                           if (posts.isEmpty) {
                             return const Center(
@@ -318,8 +317,7 @@ class _ClubPublicProfileScreenState extends State<ClubPublicProfileScreen>
                             ),
                             itemCount: posts.length,
                             itemBuilder: (_, index) {
-                              final data = posts[index].data()
-                                  as Map<String, dynamic>;
+                              final data = posts[index];
 
                               return Container(
                                 decoration: BoxDecoration(
@@ -328,11 +326,26 @@ class _ClubPublicProfileScreenState extends State<ClubPublicProfileScreen>
                                 ),
                                 padding: const EdgeInsets.all(8),
                                 child: Center(
-                                  child: Text(
-                                    data['text'] ?? '',
-                                    maxLines: 4,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        data.caption,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      if (data.collaboratorNames.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'with ${data.collaboratorNames.join(', ')}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
                               );

@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/post_service.dart';
 import '../services/session_service.dart';
 import '../services/content_moderation_service.dart';
+import '../services/mention_service.dart';
+import '../widgets/mention_text_field.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -18,6 +21,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _hoursController = TextEditingController();
   final _minutesController = TextEditingController();
   final _verificationDescriptionController = TextEditingController();
+  final _personCollaboratorController = TextEditingController();
+  final _clubCollaboratorController = TextEditingController();
 
   final PostService _postService = PostService();
   final ContentModerationService _moderationService =
@@ -31,6 +36,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String? _authorAvatar;
   String _authorRole = '';
   List<Map<String, String>> _admins = [];
+  List<MentionCandidate> _mentionCandidates = [];
+  List<UserCollaboratorInput> _selectedUserCollaborators = [];
+  List<ClubCollaboratorInput> _selectedClubCollaborators = [];
   String? _selectedAdminId;
   String? _selectedAdminName;
 
@@ -39,6 +47,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.initState();
     _loadUserData();
     _loadAdmins();
+    _loadMentionCandidates();
   }
 
   @override
@@ -47,6 +56,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _hoursController.dispose();
     _minutesController.dispose();
     _verificationDescriptionController.dispose();
+    _personCollaboratorController.dispose();
+    _clubCollaboratorController.dispose();
     super.dispose();
   }
 
@@ -102,11 +113,33 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
+  Future<void> _loadMentionCandidates() async {
+    final users = await MentionService().fetchAllUsers();
+    if (!mounted) return;
+
+    setState(() {
+      _mentionCandidates = users;
+    });
+  }
+
   bool get _hasVerificationInput {
     return (_selectedAdminId ?? '').isNotEmpty ||
         _hoursController.text.trim().isNotEmpty ||
         _minutesController.text.trim().isNotEmpty ||
         _verificationDescriptionController.text.trim().isNotEmpty;
+  }
+
+  bool get _hasReachedCollaboratorLimit {
+    return _selectedUserCollaborators.length + _selectedClubCollaborators.length >=
+        2;
+  }
+
+  void _showCollaboratorLimitMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('You can add at most 2 collaborators to a post.'),
+      ),
+    );
   }
 
   Future<void> _submitPost() async {
@@ -203,8 +236,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         authorId: _authorId!,
         authorName: _authorName!,
         authorAvatar: _authorAvatar!,
+        authorRole: _authorRole,
         caption: _captionController.text.trim(),
         imageUrl: '',
+        userCollaborators: _selectedUserCollaborators,
+        clubCollaborators: _selectedClubCollaborators,
         taggedAdminId: _hasVerificationInput ? _selectedAdminId : null,
         taggedAdminName: _hasVerificationInput ? _selectedAdminName : null,
         requestedHours: _hasVerificationInput ? requestedHours : null,
@@ -228,6 +264,216 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       hintText: hintText,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
+      ),
+    );
+  }
+
+  Widget _buildCollaboratorSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.group_outlined, color: Color(0xFFB45309)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Collaborators',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add up to 2 collaborators. Club collaboration goes live instantly for the club creator and needs creator approval for everyone else.',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 16),
+          TypeAheadField<Map<String, dynamic>>(
+            controller: _personCollaboratorController,
+            suggestionsCallback: (pattern) async {
+              final query = pattern.trim().toLowerCase();
+              if (query.isEmpty || _hasReachedCollaboratorLimit) {
+                return const <Map<String, dynamic>>[];
+              }
+
+              final snap = await FirebaseFirestore.instance
+                  .collection('users')
+                  .get();
+
+              return snap.docs
+                  .where((doc) => doc.id != _authorId)
+                  .where(
+                    (doc) => !_selectedUserCollaborators
+                        .any((user) => user.userId == doc.id),
+                  )
+                  .where((doc) {
+                    final name = (doc.data()['name'] ?? '').toString().toLowerCase();
+                    return name.contains(query);
+                  })
+                  .map(
+                    (doc) => {
+                      'id': doc.id,
+                      'name': (doc.data()['name'] ?? 'User').toString(),
+                    },
+                  )
+                  .take(5)
+                  .toList();
+            },
+            itemBuilder: (context, suggestion) {
+              return ListTile(
+                title: Text(suggestion['name'].toString()),
+                subtitle: const Text('User collaborator'),
+              );
+            },
+            onSelected: (suggestion) {
+              if (_hasReachedCollaboratorLimit) {
+                _showCollaboratorLimitMessage();
+                return;
+              }
+
+              setState(() {
+                _selectedUserCollaborators = [
+                  ..._selectedUserCollaborators,
+                  UserCollaboratorInput(
+                    userId: suggestion['id'].toString(),
+                    name: suggestion['name'].toString(),
+                  ),
+                ];
+                _personCollaboratorController.clear();
+              });
+            },
+            builder: (context, controller, focusNode) {
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                enabled: !_hasReachedCollaboratorLimit,
+                decoration: _fieldDecoration(
+                  'Add Person Collaborator',
+                  hintText: 'Search a user',
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          TypeAheadField<Map<String, dynamic>>(
+            controller: _clubCollaboratorController,
+            suggestionsCallback: (pattern) async {
+              final query = pattern.trim().toLowerCase();
+              if (query.isEmpty || _hasReachedCollaboratorLimit) {
+                return const <Map<String, dynamic>>[];
+              }
+
+              final snap = await FirebaseFirestore.instance
+                  .collection('clubs')
+                  .get();
+
+              return snap.docs
+                  .where(
+                    (doc) => !_selectedClubCollaborators
+                        .any((club) => club.clubId == doc.id),
+                  )
+                  .where((doc) {
+                    final name = (doc.data()['name'] ?? '').toString().toLowerCase();
+                    return name.contains(query);
+                  })
+                  .map(
+                    (doc) => {
+                      'id': doc.id,
+                      'name': (doc.data()['name'] ?? 'Club').toString(),
+                      'creatorId': (doc.data()['createdBy'] ?? '').toString(),
+                    },
+                  )
+                  .take(5)
+                  .toList();
+            },
+            itemBuilder: (context, suggestion) {
+              return ListTile(
+                title: Text(suggestion['name'].toString()),
+                subtitle: const Text('Club collaborator'),
+              );
+            },
+            onSelected: (suggestion) {
+              if (_hasReachedCollaboratorLimit) {
+                _showCollaboratorLimitMessage();
+                return;
+              }
+
+              setState(() {
+                _selectedClubCollaborators = [
+                  ..._selectedClubCollaborators,
+                  ClubCollaboratorInput(
+                    clubId: suggestion['id'].toString(),
+                    clubName: suggestion['name'].toString(),
+                    creatorId: suggestion['creatorId'].toString(),
+                  ),
+                ];
+                _clubCollaboratorController.clear();
+              });
+            },
+            builder: (context, controller, focusNode) {
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                enabled: !_hasReachedCollaboratorLimit,
+                decoration: _fieldDecoration(
+                  'Add Club Collaborator',
+                  hintText: 'Search a club',
+                ),
+              );
+            },
+          ),
+          if (_selectedUserCollaborators.isNotEmpty ||
+              _selectedClubCollaborators.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._selectedUserCollaborators.map(
+                  (user) => Chip(
+                    label: Text(user.name),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedUserCollaborators.removeWhere(
+                          (collaborator) =>
+                              collaborator.userId == user.userId,
+                        );
+                      });
+                    },
+                  ),
+                ),
+                ..._selectedClubCollaborators.map(
+                  (club) => Chip(
+                    label: Text('${club.clubName} (Club)'),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedClubCollaborators.removeWhere(
+                          (collaborator) =>
+                              collaborator.clubId == club.clubId,
+                        );
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -380,14 +626,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
             ],
             const SizedBox(height: 16),
-            TextField(
+            MentionTextField(
               controller: _captionController,
+              candidates: _mentionCandidates,
+              excludeUserId: _authorId,
               maxLines: null,
               decoration: _fieldDecoration(
                 'Caption',
-                hintText: "What's on your mind?",
+                hintText: "What's on your mind? Use @ to tag someone",
               ),
             ),
+            const SizedBox(height: 20),
+            _buildCollaboratorSection(),
             const SizedBox(height: 20),
             _buildVerificationSection(),
           ],

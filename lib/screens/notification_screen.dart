@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/post_service.dart';
 import '../services/session_service.dart';
+import '../services/app_notification_service.dart';
 import '../widgets/home_app_bar.dart';
 import 'talk_zone.dart';
 
@@ -128,7 +129,9 @@ class _NotificationScreenState extends State<NotificationScreen>
                 'name': requestData['name'],
                 'about': requestData['about'],
                 'createdBy': requestData['createdBy'],
+                'creatorName': requestData['createdByName'],
                 'adminName': requestData['createdByName'],
+                'admins': [],
                 'members': [
                   requestData['createdBy'],
                   ...invitedMembers,
@@ -343,6 +346,120 @@ class _NotificationScreenState extends State<NotificationScreen>
     );
   }
 
+  Future<void> _showClubCollaborationDialog(
+    Map<String, dynamic> data,
+    String notificationId,
+  ) async {
+    if (_currentUserId == null) return;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Club Collaboration Request'),
+        content: Text(
+          '${data['requesterName'] ?? 'Someone'} wants to show a post on ${data['clubName'] ?? 'this club'}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await _postService.rejectClubCollaboration(
+                postId: (data['postId'] ?? '').toString(),
+                clubId: (data['clubId'] ?? '').toString(),
+                clubName: (data['clubName'] ?? '').toString(),
+                requesterId: (data['requesterId'] ?? '').toString(),
+                notificationId: notificationId,
+                approverId: _currentUserId!,
+              );
+
+              if (!mounted) return;
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Collaboration request declined')),
+              );
+            },
+            child: const Text('Reject'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _postService.approveClubCollaboration(
+                postId: (data['postId'] ?? '').toString(),
+                clubId: (data['clubId'] ?? '').toString(),
+                clubName: (data['clubName'] ?? '').toString(),
+                requesterId: (data['requesterId'] ?? '').toString(),
+                requesterName: (data['requesterName'] ?? '').toString(),
+                notificationId: notificationId,
+                approverId: _currentUserId!,
+              );
+
+              if (!mounted) return;
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Collaboration request approved')),
+              );
+            },
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showUserCollaborationDialog(
+    Map<String, dynamic> data,
+    String notificationId,
+  ) async {
+    if (_currentUserId == null) return;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Post Collaboration Request'),
+        content: Text(
+          '${data['requesterName'] ?? 'Someone'} tagged you as a collaborator on a post.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await _postService.rejectUserCollaboration(
+                postId: (data['postId'] ?? '').toString(),
+                collaboratorId: _currentUserId!,
+                collaboratorName: _currentUserName,
+                requesterId: (data['requesterId'] ?? '').toString(),
+                notificationId: notificationId,
+              );
+
+              if (!mounted) return;
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Collaboration request declined')),
+              );
+            },
+            child: const Text('Reject'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _postService.approveUserCollaboration(
+                postId: (data['postId'] ?? '').toString(),
+                collaboratorId: _currentUserId!,
+                collaboratorName: _currentUserName,
+                requesterId: (data['requesterId'] ?? '').toString(),
+                requesterName: (data['requesterName'] ?? '').toString(),
+                notificationId: notificationId,
+              );
+
+              if (!mounted) return;
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Collaboration request approved')),
+              );
+            },
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showEditPostDialog(
     Map<String, dynamic> data,
     String notificationId,
@@ -458,7 +575,13 @@ class _NotificationScreenState extends State<NotificationScreen>
   Widget _buildPersonalList(List<QueryDocumentSnapshot> docs) {
     final personalDocs = docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
-      return data['type'] != 'club_request';
+      final tab = (data['tab'] ?? '').toString();
+      if (tab.isNotEmpty) {
+        return tab == NotificationTab.personal;
+      }
+
+      return data['type'] != 'club_request' &&
+          data['type'] != 'post_verification';
     }).toList();
 
     if (personalDocs.isEmpty) {
@@ -531,6 +654,41 @@ class _NotificationScreenState extends State<NotificationScreen>
           );
         }
 
+        if (type == 'mention') {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(data['title'] ?? 'You were mentioned'),
+              subtitle: Text(data['message'] ?? ''),
+            ),
+          );
+        }
+
+        if (type == 'user_collaboration_request') {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(data['title'] ?? 'Post collaboration request'),
+              subtitle: Text(data['message'] ?? ''),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () => _showUserCollaborationDialog(data, doc.id),
+            ),
+          );
+        }
+
+        if (type == 'club_collaboration_approved' ||
+            type == 'club_collaboration_rejected' ||
+            type == 'user_collaboration_approved' ||
+            type == 'user_collaboration_rejected') {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(data['title'] ?? 'Club collaboration update'),
+              subtitle: Text(data['message'] ?? ''),
+            ),
+          );
+        }
+
         return const SizedBox.shrink();
       },
     );
@@ -539,6 +697,11 @@ class _NotificationScreenState extends State<NotificationScreen>
   Widget _buildClubList(List<QueryDocumentSnapshot> docs) {
     final clubDocs = docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
+      final tab = (data['tab'] ?? '').toString();
+      if (tab.isNotEmpty) {
+        return tab == NotificationTab.clubs;
+      }
+
       return data['type'] == 'club_request';
     }).toList();
 
@@ -551,6 +714,36 @@ class _NotificationScreenState extends State<NotificationScreen>
       itemBuilder: (context, index) {
         final doc = clubDocs[index];
         final data = doc.data() as Map<String, dynamic>;
+        final type = (data['type'] ?? '').toString();
+
+        if (type == 'club_notice' || type == 'club_mention') {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(data['title'] ?? 'Club update'),
+              subtitle: Text(
+                [
+                  if ((data['clubName'] ?? '').toString().isNotEmpty)
+                    data['clubName'].toString(),
+                  if ((data['message'] ?? '').toString().isNotEmpty)
+                    data['message'].toString(),
+                ].join('\n'),
+              ),
+            ),
+          );
+        }
+
+        if (type == 'club_collaboration_request') {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(data['title'] ?? 'Club collaboration request'),
+              subtitle: Text(data['message'] ?? ''),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () => _showClubCollaborationDialog(data, doc.id),
+            ),
+          );
+        }
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -573,6 +766,11 @@ class _NotificationScreenState extends State<NotificationScreen>
   Widget _buildAdminTab(List<QueryDocumentSnapshot> docs) {
     final adminDocs = docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
+      final tab = (data['tab'] ?? '').toString();
+      if (tab.isNotEmpty) {
+        return tab == NotificationTab.admin;
+      }
+
       return data['type'] == 'post_verification';
     }).toList();
 
@@ -585,6 +783,17 @@ class _NotificationScreenState extends State<NotificationScreen>
       itemBuilder: (context, index) {
         final doc = adminDocs[index];
         final data = doc.data() as Map<String, dynamic>;
+        final type = (data['type'] ?? '').toString();
+
+        if (type == 'admin_mention') {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(data['title'] ?? 'Admin mention'),
+              subtitle: Text(data['message'] ?? ''),
+            ),
+          );
+        }
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
